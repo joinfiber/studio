@@ -24,6 +24,9 @@ export interface LiveOrg {
 	description: string | null;
 	url: string | null;
 	logo: string | null;
+	telephone: string | null;
+	email: string | null;
+	sameAs: string[];
 	/** Primary place, if any (an org with one is a "venue"). */
 	hasPlace: boolean;
 	placeName: string | null;
@@ -49,6 +52,9 @@ export function mapOrganization(o: Organization): LiveOrg {
 		description: o.description ?? null,
 		url: o.url ?? null,
 		logo: o.logo ?? null,
+		telephone: o.telephone ?? null,
+		email: o.email ?? null,
+		sameAs: o.sameAs ?? [],
 		hasPlace: !!place,
 		placeName: place?.name ?? null,
 		address: fullAddress || null,

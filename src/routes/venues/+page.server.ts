@@ -1,6 +1,9 @@
-import type { PageServerLoad } from './$types';
-import type { Organization } from 'neighborhood-commons';
+import { fail } from '@sveltejs/kit';
+import type { Actions, PageServerLoad } from './$types';
+import type { Organization, components } from 'neighborhood-commons';
 import { mapOrganization, type LiveOrg } from '$lib/instance/organizations.js';
+
+type OrgInput = components['schemas']['OrganizationInput'];
 
 type VerifiedFilter = 'all' | 'verified';
 type OwnerFilter = 'all' | 'mine';
@@ -59,4 +62,44 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		total,
 		error: null as string | null,
 	};
+};
+
+export const actions: Actions = {
+	// Edit an organization. PATCH /service/organizations/{id} is a partial merge,
+	// so we send only the fields the operator changed — omitted fields are
+	// preserved. `method` is not writable (the Commons sets it); only an org's
+	// owner key (or an admin key) may edit it, else 403.
+	update: async ({ request, locals }) => {
+		const { commons } = locals;
+		if (!commons.configured || !commons.sdk) {
+			return fail(400, { error: 'Commons isn’t configured on this instance.' });
+		}
+		const data = await request.formData();
+		const id = String(data.get('id') ?? '').trim();
+		if (!id) return fail(400, { error: 'Missing organization id.' });
+
+		let patch: Partial<OrgInput>;
+		try {
+			patch = JSON.parse(String(data.get('patch') ?? '{}')) as Partial<OrgInput>;
+		} catch {
+			return fail(400, { error: 'Could not read the changes.' });
+		}
+		if (Object.keys(patch).length === 0) return { ok: true, id, noop: true as const };
+
+		const result = await commons.sdk.PATCH('/service/organizations/{id}', {
+			params: { path: { id } },
+			body: patch as OrgInput,
+		});
+
+		if (result.error) {
+			const status = result.response.status;
+			if (status === 403) {
+				return fail(403, {
+					error: 'Not linked to this organization — only its owner (or an admin key) can edit it.',
+				});
+			}
+			return fail(status, { error: result.error?.error?.message ?? `Commons returned ${status}.` });
+		}
+		return { ok: true, id };
+	},
 };
