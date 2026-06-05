@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fly } from 'svelte/transition';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import type { Map as MlMap, MapOptions, GeoJSONSource, Popup } from 'maplibre-gl';
+	import type { Map as MlMap, MapOptions, GeoJSONSource } from 'maplibre-gl';
 	import type { PageData } from './$types';
 	import CapabilityGuide from '$lib/kernel/chrome/CapabilityGuide.svelte';
 	import Toast from '$lib/kernel/chrome/Toast.svelte';
@@ -24,16 +25,40 @@
 		geometry: { type: 'Point'; coordinates: [number, number] };
 		properties: Record<string, unknown>;
 	};
+	interface Draft {
+		name: string;
+		website: string;
+		phone: string;
+		sameAs: string;
+		tags: string;
+	}
 
 	let { data }: { data: PageData } = $props();
 	let mapContainer = $state<HTMLDivElement | null>(null);
 	let mapError = $state('');
 	let osmLoading = $state(false);
 	let zoomLow = $state(false);
+	let loadedCount = $state(0);
 
-	const MIN_OSM_ZOOM = 14;
+	// Curation panel
+	let selected = $state<OsmVenue | null>(null);
+	let draft = $state<Draft | null>(null);
+	let adding = $state(false);
+
 	const claimedCount = $derived(data.live ? data.points.filter((p) => p.verified).length : 0);
+	const MIN_OSM_ZOOM = 13;
+	const MAX_OSM = 2000;
 
+	// Imperative refs shared by the map and the panel. The gray layer
+	// ACCUMULATES (never cleared on view change) so panning / adding / revisiting
+	// can't wipe it — only an explicit add removes a single dot.
+	let map: MlMap | undefined;
+	let osmFeatures: Feature[] = [];
+	const osmById = new Map<string, OsmVenue>();
+	let orgFeatures: Feature[] = [];
+	const orgKeys = new Set<string>();
+
+	const roundKey = (lat: number, lng: number) => `${lat.toFixed(3)},${lng.toFixed(3)}`;
 	function orgFeature(p: { name: string; lat: number; lng: number; verified: boolean }): Feature {
 		return {
 			type: 'Feature',
@@ -41,30 +66,141 @@
 			properties: { name: p.name, verified: p.verified },
 		};
 	}
-	const roundKey = (lat: number, lng: number) => `${lat.toFixed(3)},${lng.toFixed(3)}`;
+	function setOsm() {
+		(map?.getSource('osm') as GeoJSONSource | undefined)?.setData({
+			type: 'FeatureCollection',
+			features: osmFeatures,
+		});
+		loadedCount = osmFeatures.length;
+	}
+	function setOrgs() {
+		(map?.getSource('orgs') as GeoJSONSource | undefined)?.setData({
+			type: 'FeatureCollection',
+			features: orgFeatures,
+		});
+	}
+	function fmtAddr(a?: OsmVenue['address']): string {
+		return a ? [a.streetAddress, a.addressLocality, a.addressRegion].filter(Boolean).join(', ') : '';
+	}
+
+	function openPanel(v: OsmVenue) {
+		selected = v;
+		draft = {
+			name: v.name,
+			website: v.website ?? '',
+			phone: v.phone ?? '',
+			sameAs: (v.sameAs ?? []).join(', '),
+			tags: v.category ?? '',
+		};
+	}
+	function closePanel() {
+		selected = null;
+		draft = null;
+	}
+	async function copy(text: string) {
+		try {
+			await navigator.clipboard.writeText(text);
+			toast.push('Copied', 'success', 1100);
+		} catch {
+			toast.push('Copy failed', 'error');
+		}
+	}
+
+	async function addSelected() {
+		if (!selected || !draft) return;
+		const v = selected;
+		const d = draft;
+		adding = true;
+		const payload = {
+			name: d.name.trim() || v.name,
+			lat: v.lat,
+			lng: v.lng,
+			address: v.address,
+			website: d.website.trim() || undefined,
+			phone: d.phone.trim() || undefined,
+			sameAs: d.sameAs.split(',').map((s) => s.trim()).filter(Boolean),
+			category: d.tags.trim() || v.category,
+			osmType: v.osmType,
+			osmId: v.osmId,
+		};
+		try {
+			const res = await fetch('/map/add', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ venue: payload }),
+			});
+			const r = (await res.json().catch(() => ({}))) as { error?: string };
+			if (!res.ok) {
+				toast.push(String(r.error ?? 'Add failed.'), 'error', 6000);
+				return;
+			}
+			const key = `${v.osmType}/${v.osmId}`;
+			osmById.delete(key);
+			osmFeatures = osmFeatures.filter((f) => f.properties.key !== key);
+			orgFeatures = [...orgFeatures, orgFeature({ name: payload.name, lat: v.lat, lng: v.lng, verified: false })];
+			orgKeys.add(roundKey(v.lat, v.lng));
+			setOsm();
+			setOrgs();
+			toast.push(`Added “${payload.name}”`, 'success');
+			closePanel();
+		} catch (e) {
+			toast.push(e instanceof Error ? e.message : 'Add failed.', 'error');
+		} finally {
+			adding = false;
+		}
+	}
+
+	async function loadOsm() {
+		if (!map) return;
+		if (map.getZoom() < MIN_OSM_ZOOM) {
+			zoomLow = true;
+			return; // keep what's loaded; just don't fetch more
+		}
+		zoomLow = false;
+		if (osmById.size >= MAX_OSM) return;
+		const b = map.getBounds();
+		osmLoading = true;
+		try {
+			const res = await fetch(
+				`/map/osm?s=${b.getSouth()}&w=${b.getWest()}&n=${b.getNorth()}&e=${b.getEast()}`,
+			);
+			const d = (await res.json()) as { venues?: OsmVenue[] };
+			let changed = false;
+			for (const v of d.venues ?? []) {
+				const key = `${v.osmType}/${v.osmId}`;
+				if (osmById.has(key)) continue; // already shown
+				if (orgKeys.has(roundKey(v.lat, v.lng))) continue; // already in Commons
+				if (osmById.size >= MAX_OSM) break;
+				osmById.set(key, v);
+				osmFeatures.push({
+					type: 'Feature',
+					geometry: { type: 'Point', coordinates: [v.lng, v.lat] },
+					properties: { name: v.name, key },
+				});
+				changed = true;
+			}
+			if (changed) setOsm();
+		} catch {
+			/* transient — keep existing dots */
+		} finally {
+			osmLoading = false;
+		}
+	}
 
 	onMount(() => {
 		const styleUrl = data.styleUrl;
 		const container = mapContainer;
 		if (!data.live || !data.mapReady || !styleUrl || !container) return;
-
-		let map: MlMap | undefined;
 		let destroyed = false;
 
 		(async () => {
 			const maplibre = await import('maplibre-gl');
 			if (destroyed) return;
 
-			const orgFeatures: Feature[] = data.points.map(orgFeature);
-			const orgKeys = new Set(data.points.map((p) => roundKey(p.lat, p.lng)));
-			let osmFeatures: Feature[] = [];
-			const osmById = new Map<string, OsmVenue>();
+			orgFeatures = data.points.map(orgFeature);
+			for (const p of data.points) orgKeys.add(roundKey(p.lat, p.lng));
 
-			// Default to a street-level view so OSM businesses (gray dots) are
-			// visible immediately. Fitting all venue points zooms out below the
-			// gray threshold (why the dots "disappeared"). Center on the venue
-			// centroid, else Philadelphia.
-			const opts: MapOptions = { container, style: styleUrl, zoom: 14 };
+			const opts: MapOptions = { container, style: styleUrl, zoom: 15 };
 			if (data.points.length > 0) {
 				const lat = data.points.reduce((s, p) => s + p.lat, 0) / data.points.length;
 				const lng = data.points.reduce((s, p) => s + p.lng, 0) / data.points.length;
@@ -76,82 +212,10 @@
 			map = new maplibre.Map(opts);
 			map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-right');
 
-			const setOsm = () =>
-				(map?.getSource('osm') as GeoJSONSource | undefined)?.setData({
-					type: 'FeatureCollection',
-					features: osmFeatures,
-				});
-			const setOrgs = () =>
-				(map?.getSource('orgs') as GeoJSONSource | undefined)?.setData({
-					type: 'FeatureCollection',
-					features: orgFeatures,
-				});
-
-			async function loadOsm() {
-				if (!map) return;
-				if (map.getZoom() < MIN_OSM_ZOOM) {
-					zoomLow = true;
-					osmFeatures = [];
-					setOsm();
-					return;
-				}
-				zoomLow = false;
-				const b = map.getBounds();
-				osmLoading = true;
-				try {
-					const res = await fetch(
-						`/map/osm?s=${b.getSouth()}&w=${b.getWest()}&n=${b.getNorth()}&e=${b.getEast()}`,
-					);
-					const d = (await res.json()) as { venues?: OsmVenue[] };
-					osmById.clear();
-					osmFeatures = [];
-					for (const v of d.venues ?? []) {
-						if (orgKeys.has(roundKey(v.lat, v.lng))) continue; // dedup vs Commons venues
-						const key = `${v.osmType}/${v.osmId}`;
-						osmById.set(key, v);
-						osmFeatures.push({
-							type: 'Feature',
-							geometry: { type: 'Point', coordinates: [v.lng, v.lat] },
-							properties: { name: v.name, key, category: v.category ?? '' },
-						});
-					}
-					setOsm();
-				} catch {
-					/* transient — ignore */
-				} finally {
-					osmLoading = false;
-				}
-			}
-
-			async function addVenue(v: OsmVenue, popup: Popup) {
-				const res = await fetch('/map/add', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ venue: v }),
-				});
-				const d = (await res.json().catch(() => ({}))) as { error?: string };
-				if (!res.ok) {
-					toast.push(String(d.error ?? 'Add failed.'), 'error', 6000);
-					return;
-				}
-				const key = `${v.osmType}/${v.osmId}`;
-				osmById.delete(key);
-				osmFeatures = osmFeatures.filter((f) => f.properties.key !== key);
-				orgFeatures.push(orgFeature({ name: v.name, lat: v.lat, lng: v.lng, verified: false }));
-				orgKeys.add(roundKey(v.lat, v.lng));
-				setOsm();
-				setOrgs();
-				toast.push(`Added “${v.name}”`, 'success');
-				popup.remove();
-			}
-
 			map.on('load', () => {
 				if (!map) return;
 				map.addSource('osm', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-				map.addSource('orgs', {
-					type: 'geojson',
-					data: { type: 'FeatureCollection', features: orgFeatures },
-				});
+				map.addSource('orgs', { type: 'geojson', data: { type: 'FeatureCollection', features: orgFeatures } });
 				map.addLayer({
 					id: 'osm-dots',
 					type: 'circle',
@@ -177,6 +241,12 @@
 					},
 				});
 
+				map.on('click', 'osm-dots', (e) => {
+					const f = e.features?.[0];
+					if (!f) return;
+					const v = osmById.get(String(f.properties?.key));
+					if (v) openPanel(v);
+				});
 				map.on('click', 'org-dots', (e) => {
 					const f = e.features?.[0];
 					if (!f || !map) return;
@@ -187,29 +257,6 @@
 						)
 						.addTo(map);
 				});
-
-				map.on('click', 'osm-dots', (e) => {
-					const f = e.features?.[0];
-					if (!f || !map) return;
-					const v = osmById.get(String(f.properties?.key));
-					if (!v) return;
-					const el = document.createElement('div');
-					el.innerHTML = `<strong>${v.name}</strong><br><span style="color:#888;font-size:0.74rem">${v.category ?? 'business'} · OpenStreetMap</span><br>`;
-					const btn = document.createElement('button');
-					btn.textContent = 'Add to Commons';
-					btn.className = 'map-add-btn';
-					el.appendChild(btn);
-					const popup = new maplibre.Popup({ closeButton: true, offset: 8 })
-						.setLngLat(e.lngLat)
-						.setDOMContent(el)
-						.addTo(map);
-					btn.addEventListener('click', () => {
-						btn.disabled = true;
-						btn.textContent = 'Adding…';
-						addVenue(v, popup);
-					});
-				});
-
 				for (const layer of ['org-dots', 'osm-dots']) {
 					map.on('mouseenter', layer, () => {
 						if (map) map.getCanvas().style.cursor = 'pointer';
@@ -225,7 +272,7 @@
 					t = setTimeout(loadOsm, 500);
 				});
 				zoomLow = map.getZoom() < MIN_OSM_ZOOM;
-				map.once('idle', () => loadOsm()); // load once the view has settled
+				map.once('idle', () => loadOsm());
 			});
 		})().catch((e) => {
 			mapError = e instanceof Error ? e.message : 'Map failed to load.';
@@ -234,6 +281,7 @@
 		return () => {
 			destroyed = true;
 			map?.remove();
+			map = undefined;
 		};
 	});
 </script>
@@ -242,8 +290,7 @@
 	<h2>Map</h2>
 	{#if data.live && data.mapReady}
 		<span class="total">
-			{data.points.length} venue{data.points.length === 1 ? '' : 's'} · {claimedCount} claimed{#if data.truncated}
-				· first {data.points.length}{/if}
+			{data.points.length} in Commons · {claimedCount} claimed{#if loadedCount > 0} · {loadedCount} on OSM{/if}
 		</span>
 	{/if}
 </header>
@@ -276,10 +323,57 @@
 		{:else if osmLoading}
 			<div class="map-hint">Loading businesses…</div>
 		{/if}
+
+		{#if selected && draft}
+			{@const addr = fmtAddr(selected.address)}
+			{@const gq = encodeURIComponent(`${selected.name} ${addr}`.trim())}
+			<aside class="panel" transition:fly={{ x: 360, duration: 200 }}>
+				<div class="panel-head">
+					<div class="panel-title">
+						<div class="panel-name">{selected.name}</div>
+						<div class="panel-cat">{selected.category ?? 'business'} · OpenStreetMap</div>
+					</div>
+					<button class="panel-close" onclick={closePanel} aria-label="Close">×</button>
+				</div>
+
+				<div class="ref">
+					<div class="ref-title">Reference (OpenStreetMap)</div>
+					{#if addr}
+						<div class="ref-row"><span class="ref-val">{addr}</span><button class="copy" onclick={() => copy(addr)}>copy</button></div>
+					{/if}
+					{#if selected.website}
+						{@const web = selected.website}
+						<div class="ref-row"><a class="ref-val" href={web} target="_blank" rel="noopener noreferrer">{web}</a><button class="copy" onclick={() => copy(web)}>copy</button></div>
+					{/if}
+					{#if selected.phone}
+						{@const tel = selected.phone}
+						<div class="ref-row"><span class="ref-val">{tel}</span><button class="copy" onclick={() => copy(tel)}>copy</button></div>
+					{/if}
+					{#each selected.sameAs ?? [] as s}
+						<div class="ref-row"><a class="ref-val" href={s} target="_blank" rel="noopener noreferrer">{s}</a><button class="copy" onclick={() => copy(s)}>copy</button></div>
+					{/each}
+					<a class="gsearch" href={`https://www.google.com/search?q=${gq}`} target="_blank" rel="noopener noreferrer">Search Google ↗</a>
+				</div>
+
+				<div class="form">
+					<div class="form-title">Curate &amp; add</div>
+					<label class="f"><span>Name</span><input type="text" bind:value={draft.name} /></label>
+					<label class="f"><span>Website</span><input type="text" bind:value={draft.website} /></label>
+					<label class="f"><span>Phone</span><input type="text" bind:value={draft.phone} /></label>
+					<label class="f"><span>Social links <em>(comma-separated)</em></span><input type="text" bind:value={draft.sameAs} /></label>
+					<label class="f"><span>Tags <em>(comma-separated)</em></span><input type="text" bind:value={draft.tags} /></label>
+				</div>
+
+				<div class="panel-actions">
+					<button class="primary" onclick={addSelected} disabled={adding}>{adding ? 'Adding…' : 'Add to Commons'}</button>
+				</div>
+				<p class="panel-note">Adds as <strong>proxied</strong> (relayed from OSM). Hours + a Google-data compare land next.</p>
+			</aside>
+		{/if}
 	</div>
 	<p class="hint">
-		Gray dots are OpenStreetMap businesses in view — click one and <strong>Add to Commons</strong>
-		to bring it in (it turns yellow). Yellow = in the Commons, blue = claimed.
+		Gray dots are OpenStreetMap businesses — click one to curate and <strong>Add to Commons</strong>
+		(it turns yellow). Yellow = in the Commons, blue = claimed. Dots stay put as you pan.
 	</p>
 {/if}
 
@@ -311,7 +405,7 @@
 		font-size: 0.85rem;
 		color: #999;
 		margin-top: 0.75rem;
-		max-width: 800px;
+		max-width: 820px;
 	}
 	.gate {
 		max-width: 560px;
@@ -337,7 +431,7 @@
 	}
 	.map {
 		width: 100%;
-		height: 72vh;
+		height: 74vh;
 		border: 1px solid #e5e5e5;
 		border-radius: 8px;
 		overflow: hidden;
@@ -388,27 +482,175 @@
 		font-size: 0.78rem;
 		color: #555;
 	}
+	.panel {
+		position: absolute;
+		top: 0;
+		right: 0;
+		height: 100%;
+		width: 340px;
+		max-width: 85%;
+		z-index: 2;
+		background: #fff;
+		border-left: 1px solid #e5e5e5;
+		border-radius: 0 8px 8px 0;
+		box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08);
+		overflow-y: auto;
+		padding: 1rem 1.1rem 1.25rem;
+	}
+	.panel-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 0.5rem;
+		margin-bottom: 0.85rem;
+	}
+	.panel-name {
+		font-size: 1.05rem;
+		font-weight: 600;
+		color: #222;
+		line-height: 1.25;
+	}
+	.panel-cat {
+		font-size: 0.75rem;
+		color: #888;
+		margin-top: 0.15rem;
+	}
+	.panel-close {
+		flex-shrink: 0;
+		background: none;
+		border: none;
+		font-size: 1.4rem;
+		line-height: 1;
+		color: #999;
+		cursor: pointer;
+		padding: 0 0.2rem;
+	}
+	.panel-close:hover {
+		color: #333;
+	}
+	.ref {
+		background: #fafafa;
+		border: 1px solid #eee;
+		border-radius: 6px;
+		padding: 0.6rem 0.75rem;
+		margin-bottom: 0.9rem;
+	}
+	.ref-title,
+	.form-title {
+		font-size: 0.66rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: #999;
+		margin-bottom: 0.4rem;
+	}
+	.ref-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.82rem;
+		color: #444;
+		padding: 0.15rem 0;
+	}
+	.ref-val {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		color: #166534;
+	}
+	span.ref-val {
+		color: #444;
+	}
+	.copy {
+		flex-shrink: 0;
+		font-family: inherit;
+		font-size: 0.68rem;
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+		color: #666;
+		background: #fff;
+		border: 1px solid #d8d8d8;
+		border-radius: 4px;
+		padding: 0.1rem 0.4rem;
+		cursor: pointer;
+	}
+	.copy:hover {
+		border-color: #166534;
+		color: #166534;
+	}
+	.gsearch {
+		display: inline-block;
+		margin-top: 0.4rem;
+		font-size: 0.78rem;
+		color: #166534;
+	}
+	.form {
+		display: flex;
+		flex-direction: column;
+		gap: 0.55rem;
+		margin-bottom: 0.9rem;
+	}
+	.f {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		font-size: 0.78rem;
+		color: #555;
+	}
+	.f span {
+		font-weight: 500;
+	}
+	.f em {
+		font-style: normal;
+		font-weight: 400;
+		color: #aaa;
+	}
+	.f input {
+		font-family: inherit;
+		font-size: 0.88rem;
+		color: #222;
+		padding: 0.4rem 0.55rem;
+		border: 1px solid #d0d0d0;
+		border-radius: 5px;
+		outline: none;
+	}
+	.f input:focus {
+		border-color: #166534;
+		box-shadow: 0 0 0 2px rgba(22, 101, 52, 0.12);
+	}
+	.panel-actions {
+		display: flex;
+	}
+	.primary {
+		flex: 1;
+		background: #166534;
+		border: 1px solid #166534;
+		color: #fff;
+		font-family: inherit;
+		font-size: 0.9rem;
+		padding: 0.5rem 1rem;
+		border-radius: 5px;
+		cursor: pointer;
+	}
+	.primary:hover:not(:disabled) {
+		background: #14532d;
+	}
+	.primary:disabled {
+		opacity: 0.6;
+		cursor: default;
+	}
+	.panel-note {
+		font-size: 0.72rem;
+		color: #999;
+		margin: 0.6rem 0 0;
+		line-height: 1.4;
+	}
 	code {
 		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 		font-size: 0.85em;
 		background: #f3f3f3;
 		padding: 0.1rem 0.35rem;
 		border-radius: 3px;
-	}
-	/* Popup "Add" button is created imperatively (outside Svelte's scoping). */
-	:global(.map-add-btn) {
-		margin-top: 0.4rem;
-		font-family: inherit;
-		font-size: 0.8rem;
-		padding: 0.3rem 0.7rem;
-		border: 1px solid #166534;
-		border-radius: 5px;
-		background: #166534;
-		color: #fff;
-		cursor: pointer;
-	}
-	:global(.map-add-btn:disabled) {
-		opacity: 0.6;
-		cursor: default;
 	}
 </style>
