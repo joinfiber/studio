@@ -60,18 +60,17 @@
 			let osmFeatures: Feature[] = [];
 			const osmById = new Map<string, OsmVenue>();
 
-			const opts: MapOptions = { container, style: styleUrl };
+			// Default to a street-level view so OSM businesses (gray dots) are
+			// visible immediately. Fitting all venue points zooms out below the
+			// gray threshold (why the dots "disappeared"). Center on the venue
+			// centroid, else Philadelphia.
+			const opts: MapOptions = { container, style: styleUrl, zoom: 14 };
 			if (data.points.length > 0) {
-				const lons = data.points.map((p) => p.lng);
-				const lats = data.points.map((p) => p.lat);
-				opts.bounds = [
-					[Math.min(...lons), Math.min(...lats)],
-					[Math.max(...lons), Math.max(...lats)],
-				];
-				opts.fitBoundsOptions = { padding: 48, maxZoom: 15 };
+				const lat = data.points.reduce((s, p) => s + p.lat, 0) / data.points.length;
+				const lng = data.points.reduce((s, p) => s + p.lng, 0) / data.points.length;
+				opts.center = [lng, lat];
 			} else {
-				opts.center = [-75.16, 39.95]; // Philadelphia fallback
-				opts.zoom = 14;
+				opts.center = [-75.16, 39.95];
 			}
 
 			map = new maplibre.Map(opts);
@@ -226,7 +225,7 @@
 					t = setTimeout(loadOsm, 500);
 				});
 				zoomLow = map.getZoom() < MIN_OSM_ZOOM;
-				loadOsm();
+				map.once('idle', () => loadOsm()); // load once the view has settled
 			});
 		})().catch((e) => {
 			mapError = e instanceof Error ? e.message : 'Map failed to load.';

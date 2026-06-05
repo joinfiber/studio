@@ -179,8 +179,8 @@
 						<div class="item-main">
 							<div class="line">
 								<span class="name">{o.name}</span>
-								{#if o.verified}<span class="badge verified" title="Verified">✓ verified</span>{/if}
-								<span class="badge method-{o.method}">{methodLabel(o.method)}</span>
+								{#if o.verified}<span class="badge claimed" title="Verified — claimed">✓ claimed</span>
+								{:else}<span class="badge unclaimed">unclaimed</span>{/if}
 							</div>
 							<div class="subtitle">
 								{#if o.hasPlace}{o.placeName ?? 'venue'}{#if o.city} · {o.city}{/if}{:else}<span class="muted">no location</span>{/if}
@@ -257,14 +257,18 @@
 									{#if o.email}<dt>Email</dt><dd>{o.email}</dd>{/if}
 									{#if o.sameAs.length}<dt>Social</dt><dd>{#each o.sameAs as s}<a href={s} target="_blank" rel="noopener noreferrer">{s}</a>{' '}{/each}</dd>{/if}
 									{#if o.tags.length}<dt>Tags</dt><dd>{o.tags.join(', ')}</dd>{/if}
-									<dt>Authority</dt>
+									<dt>Status</dt>
 									<dd>
-										<span class="badge method-{o.method}">{methodLabel(o.method)}</span>
-										{#if o.verified}<span class="badge verified">✓ verified</span>{/if}
+										{#if o.verified}<span class="badge claimed">✓ claimed</span>{:else}<span class="badge unclaimed">unclaimed</span>{/if}
 										<span class="auth-note">
-											{#if o.method === 'self_asserted'}First-party — this org has claimed and verified itself; its info is under its control.
-											{:else}Imported, awaiting first-party uptake. If the venue claims it, their edits take authority.{/if}
+											{#if o.verified}Claimed — a business verified itself through an ecosystem app; its info is under its control.
+											{:else}Not yet claimed — imported or operator-entered data, editable here until a business formally claims it.{/if}
 										</span>
+									</dd>
+									<dt>Provenance</dt>
+									<dd>
+										<span class="mono">{methodLabel(o.method)}</span>
+										<span class="auth-note" style="display:inline"> · how the data arrived (Commons-set; not the claim signal)</span>
 									</dd>
 									<dt>Slug</dt><dd class="mono">{o.slug}</dd>
 								</dl>
@@ -461,17 +465,11 @@
 		color: #666;
 		font-weight: 600;
 	}
-	.badge.verified {
-		background: #dcfce7;
-		color: #166534;
-	}
-	.badge.method-self_asserted {
+	.badge.claimed {
 		background: #dbeafe;
 		color: #1e40af;
 	}
-	.badge.method-seeded,
-	.badge.method-proxied,
-	.badge.method-witnessed {
+	.badge.unclaimed {
 		background: #f3f4f6;
 		color: #6b7280;
 	}

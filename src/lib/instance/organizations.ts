@@ -63,11 +63,17 @@ export function mapOrganization(o: Organization): LiveOrg {
 	};
 }
 
-/** Operator-facing label for a provenance method. */
+/**
+ * Operator-facing label for a provenance method. NOTE: this is *provenance*
+ * (how the data arrived), NOT the claim signal — "claimed" is driven by
+ * `verified` (a business that formally claimed + was approved). The Commons
+ * currently hardcodes `self_asserted` on every service-created org, so this
+ * field is unreliable until that's fixed; we surface it only as raw provenance.
+ */
 export function methodLabel(method: string): string {
 	switch (method) {
 		case 'self_asserted':
-			return 'claimed';
+			return 'first-party';
 		case 'seeded':
 			return 'imported';
 		case 'proxied':
