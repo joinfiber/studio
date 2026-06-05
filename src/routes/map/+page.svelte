@@ -463,6 +463,10 @@
 								{/if}
 								{#if g.hoursText.length}
 									<div class="ghours">
+										<div class="ghours-head">
+											<span>Hours</span>
+											{#if g.hoursPeriods.length}<button class="use" onclick={fillHoursFromGoogle}>use</button>{/if}
+										</div>
 										{#each g.hoursText as line}<div class="ghours-line">{line}</div>{/each}
 									</div>
 								{/if}
@@ -857,6 +861,16 @@
 		margin-top: 0.35rem;
 		padding-top: 0.35rem;
 		border-top: 1px solid #e6eefb;
+	}
+	.ghours-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		margin-bottom: 0.2rem;
+		font-size: 0.7rem;
+		font-weight: 500;
+		color: #889;
 	}
 	.ghours-line {
 		font-size: 0.74rem;

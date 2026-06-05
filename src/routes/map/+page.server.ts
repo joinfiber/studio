@@ -13,9 +13,9 @@ export interface OrgPoint {
 	method: string;
 }
 
-const CHUNK = 250;
-const MAX_POINTS = 1500;
-const MAX_OFFSET = 4000;
+const CHUNK = 200; // the Commons caps `limit` at 200 — 250 returns HTTP 400, zero orgs
+const MAX_POINTS = 3000;
+const MAX_OFFSET = 6000;
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const { commons } = locals;
