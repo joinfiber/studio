@@ -6,9 +6,11 @@
  * to this deployment — Commons is the source of truth for *published* facts;
  * this is just the pre-publish queue.
  *
- * Zero-config: with no DATABASE_URL it runs in-memory (durable for the process
- * lifetime — survives navigation, lost on restart). Set DATABASE_URL=file:./studio.db
- * (and attach a volume on ephemeral hosts) for true persistence.
+ * Zero-config: with no STUDIO_DATABASE_URL it runs in-memory (durable for the
+ * process lifetime — survives navigation, lost on restart). Set
+ * STUDIO_DATABASE_URL=file:/data/studio.db (and attach a volume on ephemeral
+ * hosts like Railway) for true persistence. NB: STUDIO_DATABASE_URL, not
+ * DATABASE_URL — the latter is Railway's reserved Postgres variable.
  *
  * Server-only. The client + schema init are lazily memoized.
  */
@@ -30,9 +32,27 @@ export interface StoredCandidate {
 
 let clientPromise: Promise<Client> | null = null;
 
+const SUPPORTED_DB_SCHEME = /^(file:|libsql:|wss?:|https?:|:memory:)/;
+
+/**
+ * Resolve the libsql URL. Prefers STUDIO_DATABASE_URL — plain DATABASE_URL
+ * collides with Railway's Postgres convention, and a `postgresql:` URL crashes
+ * the libsql client. An unsupported scheme (or none) falls back to in-memory
+ * instead of taking the store down.
+ */
+function resolveDbUrl(): string {
+	for (const candidate of [env.STUDIO_DATABASE_URL, env.DATABASE_URL]) {
+		if (!candidate) continue;
+		if (SUPPORTED_DB_SCHEME.test(candidate)) return candidate;
+		console.warn(
+			`[db] ignoring unsupported database URL scheme "${candidate.split(':')[0]}:" — libsql supports file:/libsql:/http(s):/ws(s):. Falling back to in-memory.`,
+		);
+	}
+	return ':memory:';
+}
+
 function initClient(): Promise<Client> {
-	const url = env.DATABASE_URL || ':memory:';
-	const client = createClient({ url });
+	const client = createClient({ url: resolveDbUrl() });
 	return client
 		.batch(
 			[
@@ -155,7 +175,7 @@ export async function countCandidates(status = 'pending'): Promise<number> {
 /** True when reviews persist across restarts (a real DATABASE_URL is set).
  *  In-memory mode still works for the session, but the map warns it's transient. */
 export function reviewsPersistent(): boolean {
-	return !!env.DATABASE_URL;
+	return resolveDbUrl() !== ':memory:';
 }
 
 /** All org ids the operator has marked reviewed. */
