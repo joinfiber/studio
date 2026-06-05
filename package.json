@@ -26,6 +26,7 @@
     "@sveltejs/adapter-node": "^5.5.4",
     "@sveltejs/kit": "^2.61.1",
     "fast-xml-parser": "^5.8.0",
+    "maplibre-gl": "^5.24.0",
     "marked": "^18.0.4",
     "neighborhood-commons": "^3.2.0",
     "otplib": "^12.0.1",

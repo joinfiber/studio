@@ -106,6 +106,21 @@ export function getCapabilities(): Capability[] {
 			],
 		},
 		{
+			id: 'map',
+			label: 'Map view',
+			unlocks:
+				'A live map of the venue graph — Commons organizations plotted as dots (and, later, OpenStreetMap businesses to add). The data comes from the Commons + OSM; this only provides the basemap tiles.',
+			prereqs: [
+				{
+					env: 'MAPTILER_API_KEY',
+					label: 'MapTiler API key',
+					met: present('MAPTILER_API_KEY'),
+					howto:
+						'A free MapTiler key (maptiler.com) for the basemap. It is used in the browser, so restrict it to your domain in the MapTiler dashboard.',
+				},
+			],
+		},
+		{
 			id: 'geocode',
 			label: 'Geocode places',
 			unlocks:

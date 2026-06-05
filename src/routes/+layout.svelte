@@ -10,6 +10,7 @@
 		{ href: '/sources', label: 'Sources' },
 		{ href: '/add', label: 'Add' },
 		{ href: '/venues', label: 'Venues' },
+		{ href: '/map', label: 'Map' },
 		{ href: '/library', label: 'Library' },
 	];
 
