@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import type { Map as MlMap, MapOptions, GeoJSONSource } from 'maplibre-gl';
+	import type { Map as MlMap, MapOptions, GeoJSONSource, FilterSpecification } from 'maplibre-gl';
 	import type { PageData } from './$types';
 	import CapabilityGuide from '$lib/kernel/chrome/CapabilityGuide.svelte';
 	import Toast from '$lib/kernel/chrome/Toast.svelte';
@@ -12,6 +12,7 @@
 		parseOsmHours,
 		weekFromGooglePeriods,
 		weekToSpec,
+		weekFromSpec,
 		hasAnyHours,
 		applyToWeekdays,
 		applyToAll,
@@ -33,6 +34,15 @@
 		osmType: string;
 		osmId: number;
 	};
+	type FullOrg = {
+		id: string;
+		name: string;
+		lat: number;
+		lng: number;
+		verified: boolean;
+		reviewed: boolean;
+		openingHoursSpecification: unknown;
+	};
 	type Feature = {
 		type: 'Feature';
 		geometry: { type: 'Point'; coordinates: [number, number] };
@@ -44,7 +54,9 @@
 		phone: string;
 		sameAs: string;
 		tags: string;
+		description: string;
 	}
+	type Filter = 'all' | 'needs' | 'reviewed';
 
 	let { data }: { data: PageData } = $props();
 	let mapContainer = $state<HTMLDivElement | null>(null);
@@ -52,11 +64,18 @@
 	let osmLoading = $state(false);
 	let zoomLow = $state(false);
 	let loadedCount = $state(0);
+	let filter = $state<Filter>('all');
+	let reviewedIds = $state(new Set<string>());
 
-	// Curation panel
+	// Panel: `selected` = adding a gray OSM venue; `editing` = editing an existing
+	// Commons venue (yellow). At most one is set.
 	let selected = $state<OsmVenue | null>(null);
+	let editing = $state<FullOrg | null>(null);
 	let draft = $state<Draft | null>(null);
+	let original = $state<Draft | null>(null); // edit-mode dirty check
 	let adding = $state(false);
+	let savingEdit = $state(false);
+	let editLoading = $state(false);
 
 	// Google reference (display-only) + hours editor
 	let google = $state<GoogleDetails | null>(null);
@@ -66,12 +85,29 @@
 	let hoursOpen = $state(false);
 
 	const claimedCount = $derived(data.live ? data.points.filter((p) => p.verified).length : 0);
+	const reviewedCount = $derived(reviewedIds.size);
+	const subjName = $derived(selected?.name ?? editing?.name ?? '');
+	const subjLat = $derived(selected?.lat ?? editing?.lat ?? 0);
+	const subjLng = $derived(selected?.lng ?? editing?.lng ?? 0);
+	const editDirty = $derived(
+		!!editing &&
+			!!draft &&
+			!!original &&
+			(draft.name !== original.name ||
+				draft.website !== original.website ||
+				draft.phone !== original.phone ||
+				draft.sameAs !== original.sameAs ||
+				draft.tags !== original.tags ||
+				draft.description !== original.description ||
+				JSON.stringify(weekToSpec(week)) !==
+					JSON.stringify(weekToSpec(weekFromSpec(editing.openingHoursSpecification)))),
+	);
+
 	const MIN_OSM_ZOOM = 13;
 	const MAX_OSM = 2000;
 
-	// Imperative refs shared by the map and the panel. The gray layer
-	// ACCUMULATES (never cleared on view change) so panning / adding / revisiting
-	// can't wipe it — only an explicit add removes a single dot.
+	// Imperative refs shared by the map and the panel. The gray layer ACCUMULATES
+	// (never cleared on view change); only an explicit add removes a dot.
 	let map: MlMap | undefined;
 	let osmFeatures: Feature[] = [];
 	const osmById = new Map<string, OsmVenue>();
@@ -79,11 +115,18 @@
 	const orgKeys = new Set<string>();
 
 	const roundKey = (lat: number, lng: number) => `${lat.toFixed(3)},${lng.toFixed(3)}`;
-	function orgFeature(p: { name: string; lat: number; lng: number; verified: boolean }): Feature {
+	function orgFeature(p: {
+		id: string;
+		name: string;
+		lat: number;
+		lng: number;
+		verified: boolean;
+		reviewed: boolean;
+	}): Feature {
 		return {
 			type: 'Feature',
 			geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
-			properties: { name: p.name, verified: p.verified },
+			properties: { id: p.id, name: p.name, verified: p.verified, reviewed: p.reviewed },
 		};
 	}
 	function setOsm() {
@@ -99,11 +142,26 @@
 			features: orgFeatures,
 		});
 	}
+	function patchOrgFeature(orgId: string, props: Partial<{ name: string; reviewed: boolean }>) {
+		const f = orgFeatures.find((ft) => ft.properties.id === orgId);
+		if (!f) return;
+		Object.assign(f.properties, props);
+		setOrgs();
+	}
 	function fmtAddr(a?: OsmVenue['address']): string {
 		return a ? [a.streetAddress, a.addressLocality, a.addressRegion].filter(Boolean).join(', ') : '';
 	}
 
+	function resetPanelExtras() {
+		google = null;
+		googleLoading = false;
+		googleTried = false;
+		week = emptyWeek();
+		hoursOpen = false;
+	}
 	function openPanel(v: OsmVenue) {
+		editing = null;
+		original = null;
 		selected = v;
 		draft = {
 			name: v.name,
@@ -111,17 +169,75 @@
 			phone: v.phone ?? '',
 			sameAs: (v.sameAs ?? []).join(', '),
 			tags: v.category ?? '',
+			description: '',
 		};
-		google = null;
-		googleLoading = false;
-		googleTried = false;
-		week = emptyWeek();
-		hoursOpen = false;
+		resetPanelExtras();
+	}
+	async function openEditPanel(p: FullOrg) {
+		selected = null;
+		resetPanelExtras();
+		editLoading = true;
+		editing = p;
+		draft = { name: p.name, website: '', phone: '', sameAs: '', tags: '', description: '' };
+		original = { ...draft };
+		try {
+			const res = await fetch(`/map/org/${encodeURIComponent(p.id)}`);
+			const r = (await res.json().catch(() => ({}))) as {
+				error?: string;
+				raw?: {
+					name?: string;
+					url?: string | null;
+					telephone?: string | null;
+					description?: string | null;
+					sameAs?: string[];
+					tags?: string[];
+					openingHoursSpecification?: unknown;
+					verified?: boolean;
+					location?: { geo?: { latitude?: number; longitude?: number } };
+				};
+			};
+			if (!res.ok || !r.raw) {
+				toast.push(r.error ?? 'Couldn’t load venue.', 'error');
+				closePanel();
+				return;
+			}
+			const raw = r.raw;
+			const geo = raw.location?.geo;
+			editing = {
+				id: p.id,
+				name: raw.name ?? p.name,
+				lat: geo?.latitude ?? p.lat,
+				lng: geo?.longitude ?? p.lng,
+				verified: raw.verified ?? p.verified,
+				reviewed: p.reviewed,
+				openingHoursSpecification: raw.openingHoursSpecification ?? null,
+			};
+			draft = {
+				name: raw.name ?? p.name,
+				website: raw.url ?? '',
+				phone: raw.telephone ?? '',
+				sameAs: (raw.sameAs ?? []).join(', '),
+				tags: (raw.tags ?? []).join(', '),
+				description: raw.description ?? '',
+			};
+			original = { ...draft };
+			week = weekFromSpec(raw.openingHoursSpecification);
+		} catch (e) {
+			toast.push(e instanceof Error ? e.message : 'Couldn’t load venue.', 'error');
+			closePanel();
+		} finally {
+			editLoading = false;
+		}
 	}
 	function closePanel() {
 		selected = null;
+		editing = null;
 		draft = null;
+		original = null;
+		google = null;
+		googleTried = false;
 	}
+
 	async function copy(text: string) {
 		try {
 			await navigator.clipboard.writeText(text);
@@ -132,13 +248,13 @@
 	}
 
 	async function loadGoogle() {
-		if (!selected || googleLoading) return;
+		if ((!selected && !editing) || googleLoading) return;
 		googleLoading = true;
 		try {
 			const res = await fetch('/map/google', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name: selected.name, lat: selected.lat, lng: selected.lng }),
+				body: JSON.stringify({ name: subjName, lat: subjLat, lng: subjLng }),
 			});
 			const r = (await res.json().catch(() => ({}))) as { details?: GoogleDetails | null; error?: string };
 			if (!res.ok) {
@@ -211,7 +327,7 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ venue: payload }),
 			});
-			const r = (await res.json().catch(() => ({}))) as { error?: string };
+			const r = (await res.json().catch(() => ({}))) as { error?: string; orgId?: string };
 			if (!res.ok) {
 				toast.push(String(r.error ?? 'Add failed.'), 'error', 6000);
 				return;
@@ -219,7 +335,17 @@
 			const key = `${v.osmType}/${v.osmId}`;
 			osmById.delete(key);
 			osmFeatures = osmFeatures.filter((f) => f.properties.key !== key);
-			orgFeatures = [...orgFeatures, orgFeature({ name: payload.name, lat: v.lat, lng: v.lng, verified: false })];
+			orgFeatures = [
+				...orgFeatures,
+				orgFeature({
+					id: r.orgId ?? `osm-${v.osmType}-${v.osmId}`,
+					name: payload.name,
+					lat: v.lat,
+					lng: v.lng,
+					verified: false,
+					reviewed: false,
+				}),
+			];
 			orgKeys.add(roundKey(v.lat, v.lng));
 			setOsm();
 			setOrgs();
@@ -230,6 +356,81 @@
 		} finally {
 			adding = false;
 		}
+	}
+
+	async function markReviewed(orgId: string, reviewed: boolean): Promise<boolean> {
+		const res = await fetch('/map/review', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ orgId, reviewed }),
+		});
+		if (!res.ok) {
+			toast.push('Couldn’t update review state.', 'error');
+			return false;
+		}
+		if (reviewed) reviewedIds.add(orgId);
+		else reviewedIds.delete(orgId);
+		patchOrgFeature(orgId, { reviewed });
+		if (editing && editing.id === orgId) editing = { ...editing, reviewed };
+		return true;
+	}
+
+	async function saveEdit() {
+		if (!editing || !draft || !original) return;
+		const e = editing;
+		const d = draft;
+		const o = original;
+		savingEdit = true;
+		try {
+			const patch: Record<string, unknown> = {};
+			if (d.name.trim() && d.name !== o.name) patch.name = d.name.trim();
+			if (d.website !== o.website) patch.url = d.website.trim() || null;
+			if (d.phone !== o.phone) patch.telephone = d.phone.trim() || null;
+			if (d.description !== o.description) patch.description = d.description.trim() || null;
+			if (d.sameAs !== o.sameAs) patch.sameAs = d.sameAs.split(',').map((s) => s.trim()).filter(Boolean);
+			if (d.tags !== o.tags) patch.tags = d.tags.split(',').map((s) => s.trim()).filter(Boolean);
+			const newSpec = weekToSpec(week);
+			if (JSON.stringify(newSpec) !== JSON.stringify(weekToSpec(weekFromSpec(e.openingHoursSpecification)))) {
+				patch.openingHoursSpecification = newSpec;
+			}
+
+			const edited = Object.keys(patch).length > 0;
+			if (edited) {
+				const res = await fetch(`/map/org/${encodeURIComponent(e.id)}`, {
+					method: 'PATCH',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(patch),
+				});
+				const r = (await res.json().catch(() => ({}))) as { error?: string };
+				if (!res.ok) {
+					toast.push(r.error ?? 'Save failed.', 'error', 6000);
+					return;
+				}
+				if (patch.name) patchOrgFeature(e.id, { name: String(patch.name) });
+			}
+			await markReviewed(e.id, true);
+			toast.push(edited ? 'Saved & marked reviewed' : 'Marked reviewed', 'success');
+			closePanel();
+		} catch (err) {
+			toast.push(err instanceof Error ? err.message : 'Save failed.', 'error');
+		} finally {
+			savingEdit = false;
+		}
+	}
+	async function unreview() {
+		if (editing) await markReviewed(editing.id, false);
+	}
+
+	function applyFilter(f: Filter) {
+		filter = f;
+		if (!map) return;
+		const expr: unknown =
+			f === 'needs'
+				? ['all', ['!', ['get', 'reviewed']], ['!', ['get', 'verified']]]
+				: f === 'reviewed'
+					? ['==', ['get', 'reviewed'], true]
+					: null;
+		map.setFilter('org-dots', expr as FilterSpecification | null);
 	}
 
 	async function loadOsm() {
@@ -250,8 +451,8 @@
 			let changed = false;
 			for (const v of d.venues ?? []) {
 				const key = `${v.osmType}/${v.osmId}`;
-				if (osmById.has(key)) continue; // already shown
-				if (orgKeys.has(roundKey(v.lat, v.lng))) continue; // already in Commons
+				if (osmById.has(key)) continue;
+				if (orgKeys.has(roundKey(v.lat, v.lng))) continue;
 				if (osmById.size >= MAX_OSM) break;
 				osmById.set(key, v);
 				osmFeatures.push({
@@ -280,6 +481,7 @@
 			if (destroyed) return;
 
 			orgFeatures = data.points.map(orgFeature);
+			reviewedIds = new Set(data.points.filter((p) => p.reviewed).map((p) => p.id));
 			for (const p of data.points) orgKeys.add(roundKey(p.lat, p.lng));
 
 			const opts: MapOptions = { container, style: styleUrl, zoom: 15 };
@@ -317,11 +519,13 @@
 					paint: {
 						'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 3, 14, 6],
 						'circle-color': ['case', ['get', 'verified'], '#2563eb', '#eab308'],
-						'circle-stroke-width': 1,
-						'circle-stroke-color': '#ffffff',
+						// Reviewed venues wear a green ring — progress accrues as you work.
+						'circle-stroke-width': ['case', ['get', 'reviewed'], 2.5, 1],
+						'circle-stroke-color': ['case', ['get', 'reviewed'], '#16a34a', '#ffffff'],
 						'circle-opacity': 0.95,
 					},
 				});
+				if (filter !== 'all') applyFilter(filter);
 
 				map.on('click', 'osm-dots', (e) => {
 					const f = e.features?.[0];
@@ -331,13 +535,19 @@
 				});
 				map.on('click', 'org-dots', (e) => {
 					const f = e.features?.[0];
-					if (!f || !map) return;
-					new maplibre.Popup({ closeButton: false, offset: 8 })
-						.setLngLat(e.lngLat)
-						.setHTML(
-							`<strong>${String(f.properties?.name ?? 'Venue')}</strong><br><span style="color:#666;font-size:0.78rem">${f.properties?.verified ? 'claimed (verified)' : 'in the Commons'}</span>`,
-						)
-						.addTo(map);
+					if (!f) return;
+					const props = f.properties ?? {};
+					if (!props.id) return;
+					const coords = (f.geometry as { coordinates: [number, number] }).coordinates;
+					openEditPanel({
+						id: String(props.id),
+						name: String(props.name ?? 'Venue'),
+						lat: coords[1],
+						lng: coords[0],
+						verified: props.verified === true || props.verified === 'true',
+						reviewed: props.reviewed === true || props.reviewed === 'true',
+						openingHoursSpecification: null,
+					});
 				});
 				for (const layer of ['org-dots', 'osm-dots']) {
 					map.on('mouseenter', layer, () => {
@@ -393,12 +603,28 @@
 {:else}
 	{#if data.error}<div class="error-box">Couldn't load venues: {data.error}</div>{/if}
 	{#if mapError}<div class="error-box">{mapError}</div>{/if}
+
+	<div class="map-controls">
+		<div class="seg" role="group" aria-label="Filter venues by review state">
+			<button class:active={filter === 'all'} onclick={() => applyFilter('all')}>All</button>
+			<button class:active={filter === 'needs'} onclick={() => applyFilter('needs')}>Needs review</button>
+			<button class:active={filter === 'reviewed'} onclick={() => applyFilter('reviewed')}>Reviewed</button>
+		</div>
+		<span class="rev-count">{reviewedCount} reviewed</span>
+		{#if !data.reviewPersistent}
+			<span class="rev-warn" title="Set DATABASE_URL (Turso or a Railway volume) so review progress survives restarts.">
+				⚠ review state is in-memory — resets on restart
+			</span>
+		{/if}
+	</div>
+
 	<div class="map-wrap">
 		<div class="map" bind:this={mapContainer}></div>
 		<div class="legend">
 			<span class="swatch osm"></span> OpenStreetMap
 			<span class="swatch in-commons"></span> In the Commons
 			<span class="swatch claimed"></span> Claimed
+			<span class="swatch reviewed"></span> Reviewed
 		</div>
 		{#if zoomLow}
 			<div class="map-hint">Zoom in to see nearby businesses</div>
@@ -406,42 +632,55 @@
 			<div class="map-hint">Loading businesses…</div>
 		{/if}
 
-		{#if selected && draft}
-			{@const addr = fmtAddr(selected.address)}
-			{@const gq = encodeURIComponent(`${selected.name} ${addr}`.trim())}
+		{#if (selected || editing) && draft}
+			{@const isEdit = !!editing}
+			{@const addr = selected ? fmtAddr(selected.address) : ''}
+			{@const gq = encodeURIComponent(`${subjName} ${addr}`.trim())}
 			<aside class="panel" transition:fly={{ x: 360, duration: 200 }}>
 				<div class="panel-head">
 					<div class="panel-title">
-						<div class="panel-name">{selected.name}</div>
-						<div class="panel-cat">{selected.category ?? 'business'} · OpenStreetMap</div>
+						<div class="panel-name">{subjName}</div>
+						{#if isEdit}
+							<div class="panel-cat">
+								in the Commons{#if editing?.verified} · claimed{/if}
+								{#if editing?.reviewed}<span class="rev-badge">✓ reviewed</span>{/if}
+							</div>
+						{:else}
+							<div class="panel-cat">{selected?.category ?? 'business'} · OpenStreetMap</div>
+						{/if}
 					</div>
 					<button class="panel-close" onclick={closePanel} aria-label="Close">×</button>
 				</div>
 
-				<div class="ref">
-					<div class="ref-title">Reference (OpenStreetMap)</div>
-					{#if addr}
-						<div class="ref-row"><span class="ref-val">{addr}</span><button class="copy" onclick={() => copy(addr)}>copy</button></div>
-					{/if}
-					{#if selected.website}
-						{@const web = selected.website}
-						<div class="ref-row"><a class="ref-val" href={web} target="_blank" rel="noopener noreferrer">{web}</a><button class="copy" onclick={() => copy(web)}>copy</button></div>
-					{/if}
-					{#if selected.phone}
-						{@const tel = selected.phone}
-						<div class="ref-row"><span class="ref-val">{tel}</span><button class="copy" onclick={() => copy(tel)}>copy</button></div>
-					{/if}
-					{#each selected.sameAs ?? [] as s}
-						<div class="ref-row"><a class="ref-val" href={s} target="_blank" rel="noopener noreferrer">{s}</a><button class="copy" onclick={() => copy(s)}>copy</button></div>
-					{/each}
-					<a class="gsearch" href={`https://www.google.com/search?q=${gq}`} target="_blank" rel="noopener noreferrer">Search Google ↗</a>
-				</div>
+				{#if editLoading}<div class="panel-loading">Loading venue…</div>{/if}
+
+				{#if selected}
+					{@const s = selected}
+					<div class="ref">
+						<div class="ref-title">Reference (OpenStreetMap)</div>
+						{#if addr}
+							<div class="ref-row"><span class="ref-val">{addr}</span><button class="copy" onclick={() => copy(addr)}>copy</button></div>
+						{/if}
+						{#if s.website}
+							{@const web = s.website}
+							<div class="ref-row"><a class="ref-val" href={web} target="_blank" rel="noopener noreferrer">{web}</a><button class="copy" onclick={() => copy(web)}>copy</button></div>
+						{/if}
+						{#if s.phone}
+							{@const tel = s.phone}
+							<div class="ref-row"><span class="ref-val">{tel}</span><button class="copy" onclick={() => copy(tel)}>copy</button></div>
+						{/if}
+						{#each s.sameAs ?? [] as so}
+							<div class="ref-row"><a class="ref-val" href={so} target="_blank" rel="noopener noreferrer">{so}</a><button class="copy" onclick={() => copy(so)}>copy</button></div>
+						{/each}
+						<a class="gsearch" href={`https://www.google.com/search?q=${gq}`} target="_blank" rel="noopener noreferrer">Search Google ↗</a>
+					</div>
+				{/if}
 
 				{#if data.googleReady}
 					<div class="gcompare">
 						{#if !googleTried}
 							<button class="compare-btn" onclick={loadGoogle} disabled={googleLoading}>
-								{googleLoading ? 'Checking Google…' : 'Compare with Google'}
+								{googleLoading ? 'Checking Google…' : isEdit ? 'Refresh from Google' : 'Compare with Google'}
 							</button>
 						{:else if google}
 							{@const g = google}
@@ -476,16 +715,19 @@
 								{/if}
 							</div>
 						{:else}
-							<div class="gnone">No Google match found.</div>
+							<div class="gnone">No Google match. <a class="gsearch" href={`https://www.google.com/search?q=${gq}`} target="_blank" rel="noopener noreferrer">Search ↗</a></div>
 						{/if}
 					</div>
 				{/if}
 
 				<div class="form">
-					<div class="form-title">Curate &amp; add</div>
+					<div class="form-title">{isEdit ? 'Edit venue' : 'Curate & add'}</div>
 					<label class="f"><span>Name</span><input type="text" bind:value={draft.name} /></label>
 					<label class="f"><span>Website</span><input type="text" bind:value={draft.website} /></label>
 					<label class="f"><span>Phone</span><input type="text" bind:value={draft.phone} /></label>
+					{#if isEdit}
+						<label class="f"><span>Description</span><textarea rows="2" bind:value={draft.description}></textarea></label>
+					{/if}
 					<label class="f"><span>Social links <em>(comma-separated)</em></span><input type="text" bind:value={draft.sameAs} /></label>
 					<label class="f"><span>Tags <em>(comma-separated)</em></span><input type="text" bind:value={draft.tags} /></label>
 				</div>
@@ -494,7 +736,7 @@
 					<div class="hours-head">
 						<span class="form-title">Hours</span>
 						<div class="hours-fill">
-							{#if selected.openingHoursRaw}<button class="mini" onclick={fillHoursFromOsm}>from OSM</button>{/if}
+							{#if selected?.openingHoursRaw}<button class="mini" onclick={fillHoursFromOsm}>from OSM</button>{/if}
 							{#if google?.hoursPeriods.length}<button class="mini" onclick={fillHoursFromGoogle}>from Google</button>{/if}
 							<button class="mini" onclick={() => (hoursOpen = !hoursOpen)}>{hoursOpen ? 'hide' : 'edit'}</button>
 						</div>
@@ -524,16 +766,28 @@
 					{/if}
 				</div>
 
-				<div class="panel-actions">
-					<button class="primary" onclick={addSelected} disabled={adding}>{adding ? 'Adding…' : 'Add to Commons'}</button>
-				</div>
-				<p class="panel-note">Adds as <strong>proxied</strong> — relayed from OSM. Google data is shown for reference only and is never stored.</p>
+				{#if isEdit}
+					<div class="panel-actions">
+						<button class="primary" onclick={saveEdit} disabled={savingEdit}>
+							{savingEdit ? 'Saving…' : editDirty ? 'Save & mark reviewed' : 'Mark reviewed'}
+						</button>
+					</div>
+					{#if editing?.reviewed}
+						<button class="linklike" onclick={unreview}>Un-mark reviewed</button>
+					{/if}
+					<p class="panel-note">Saves edits to the Commons and records this venue as reviewed (Studio-local). Google data is reference only — never stored.</p>
+				{:else}
+					<div class="panel-actions">
+						<button class="primary" onclick={addSelected} disabled={adding}>{adding ? 'Adding…' : 'Add to Commons'}</button>
+					</div>
+					<p class="panel-note">Adds as <strong>proxied</strong> — relayed from OSM. Google data is shown for reference only and is never stored.</p>
+				{/if}
 			</aside>
 		{/if}
 	</div>
 	<p class="hint">
-		Gray dots are OpenStreetMap businesses — click one to curate and <strong>Add to Commons</strong>
-		(it turns yellow). Yellow = in the Commons, blue = claimed. Dots stay put as you pan.
+		Gray = OpenStreetMap (click to add) · yellow = in the Commons (click to review &amp; edit) ·
+		blue = claimed · green ring = reviewed. Filter by review state above to work through the slate.
 	</p>
 {/if}
 
@@ -586,12 +840,55 @@
 		color: #991b1b;
 		font-size: 0.9rem;
 	}
+	.map-controls {
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
+		margin-bottom: 0.6rem;
+		flex-wrap: wrap;
+	}
+	.seg {
+		display: inline-flex;
+		border: 1px solid #d8d8d8;
+		border-radius: 6px;
+		overflow: hidden;
+	}
+	.seg button {
+		font-family: inherit;
+		font-size: 0.8rem;
+		color: #555;
+		background: #fff;
+		border: none;
+		border-left: 1px solid #e5e5e5;
+		padding: 0.35rem 0.8rem;
+		cursor: pointer;
+	}
+	.seg button:first-child {
+		border-left: none;
+	}
+	.seg button.active {
+		background: #166534;
+		color: #fff;
+	}
+	.rev-count {
+		font-size: 0.8rem;
+		color: #16a34a;
+		font-weight: 500;
+	}
+	.rev-warn {
+		font-size: 0.76rem;
+		color: #b45309;
+		background: #fffbeb;
+		border: 1px solid #fde68a;
+		border-radius: 5px;
+		padding: 0.15rem 0.5rem;
+	}
 	.map-wrap {
 		position: relative;
 	}
 	.map {
 		width: 100%;
-		height: 74vh;
+		height: 72vh;
 		border: 1px solid #e5e5e5;
 		border-radius: 8px;
 		overflow: hidden;
@@ -627,6 +924,11 @@
 	}
 	.swatch.claimed {
 		background: #2563eb;
+		margin-left: 0.55rem;
+	}
+	.swatch.reviewed {
+		background: #eab308;
+		border: 2px solid #16a34a;
 		margin-left: 0.55rem;
 	}
 	.map-hint {
@@ -675,6 +977,11 @@
 		color: #888;
 		margin-top: 0.15rem;
 	}
+	.rev-badge {
+		color: #16a34a;
+		font-weight: 600;
+		margin-left: 0.3rem;
+	}
 	.panel-close {
 		flex-shrink: 0;
 		background: none;
@@ -687,6 +994,11 @@
 	}
 	.panel-close:hover {
 		color: #333;
+	}
+	.panel-loading {
+		font-size: 0.82rem;
+		color: #999;
+		padding: 0.3rem 0 0.8rem;
 	}
 	.ref {
 		background: #fafafa;
@@ -766,7 +1078,8 @@
 		font-weight: 400;
 		color: #aaa;
 	}
-	.f input {
+	.f input,
+	.f textarea {
 		font-family: inherit;
 		font-size: 0.88rem;
 		color: #222;
@@ -775,7 +1088,12 @@
 		border-radius: 5px;
 		outline: none;
 	}
-	.f input:focus {
+	.f textarea {
+		resize: vertical;
+		line-height: 1.4;
+	}
+	.f input:focus,
+	.f textarea:focus {
 		border-color: #166534;
 		box-shadow: 0 0 0 2px rgba(22, 101, 52, 0.12);
 	}
@@ -799,6 +1117,19 @@
 	.primary:disabled {
 		opacity: 0.6;
 		cursor: default;
+	}
+	.linklike {
+		background: none;
+		border: none;
+		font-family: inherit;
+		font-size: 0.76rem;
+		color: #999;
+		cursor: pointer;
+		padding: 0.5rem 0 0;
+		text-decoration: underline;
+	}
+	.linklike:hover {
+		color: #b91c1c;
 	}
 	.panel-note {
 		font-size: 0.72rem;

@@ -3,6 +3,7 @@ import { env } from '$env/dynamic/private';
 import type { Organization } from 'neighborhood-commons';
 import { getCapability } from '$lib/kernel/capabilities.js';
 import { googlePlacesConfigured } from '$lib/kernel/google-places.js';
+import { listReviewedOrgIds, reviewsPersistent } from '$lib/kernel/db.js';
 
 export interface OrgPoint {
 	id: string;
@@ -11,6 +12,8 @@ export interface OrgPoint {
 	lng: number;
 	verified: boolean;
 	method: string;
+	/** Operator-local: has this venue been vetted in the cleanup pass. */
+	reviewed: boolean;
 }
 
 const CHUNK = 200; // the Commons caps `limit` at 200 — 250 returns HTTP 400, zero orgs
@@ -21,12 +24,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const { commons } = locals;
 	const capability = getCapability('map');
 	const googleReady = googlePlacesConfigured();
+	const reviewPersistent = reviewsPersistent();
+	const reviewedSet = new Set<string>(await listReviewedOrgIds().catch(() => []));
 	const styleUrl = env.MAPTILER_API_KEY
 		? `https://api.maptiler.com/maps/dataviz/style.json?key=${env.MAPTILER_API_KEY}`
 		: null;
 
 	if (!commons.configured || !commons.sdk) {
-		return { live: false as const, mapReady: !!styleUrl, styleUrl, capability, googleReady, points: [] as OrgPoint[] };
+		return { live: false as const, mapReady: !!styleUrl, styleUrl, capability, googleReady, reviewPersistent, points: [] as OrgPoint[] };
 	}
 
 	const points: OrgPoint[] = [];
@@ -47,6 +52,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 						lng: geo.longitude,
 						verified: o.verified ?? false,
 						method: o.method,
+						reviewed: reviewedSet.has(o.id),
 					});
 				}
 			}
@@ -61,6 +67,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			styleUrl,
 			capability,
 			googleReady,
+			reviewPersistent,
 			points,
 			truncated,
 			error: err instanceof Error ? err.message : 'Failed to load organizations.',
@@ -73,6 +80,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		styleUrl,
 		capability,
 		googleReady,
+		reviewPersistent,
 		points,
 		truncated,
 		error: null as string | null,

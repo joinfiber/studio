@@ -6,6 +6,8 @@ import {
 	setCandidateStatus,
 	updateCandidate,
 	deleteCandidate,
+	setOrgReviewed,
+	listReviewedOrgIds,
 } from './db.js';
 import type { EventCandidate } from './candidate.js';
 
@@ -72,5 +74,31 @@ describe('candidate store', () => {
 		const row = (await listCandidates('pending')).find((p) => p.candidate.data.name === 'Self Organized');
 		expect(row?.organizer).toBe('Built-in Org');
 		if (row) await deleteCandidate(row.id);
+	});
+});
+
+describe('org review overlay', () => {
+	it('marks, lists, re-marks idempotently, and unmarks', async () => {
+		const id = 'org-review-aaa';
+		await setOrgReviewed(id, true);
+		expect(await listReviewedOrgIds()).toContain(id);
+
+		// Idempotent: marking again doesn't duplicate (PRIMARY KEY upsert).
+		await setOrgReviewed(id, true);
+		expect((await listReviewedOrgIds()).filter((x) => x === id)).toHaveLength(1);
+
+		await setOrgReviewed(id, false);
+		expect(await listReviewedOrgIds()).not.toContain(id);
+	});
+
+	it('tracks multiple venues independently', async () => {
+		await setOrgReviewed('org-review-b', true);
+		await setOrgReviewed('org-review-c', true);
+		const ids = await listReviewedOrgIds();
+		expect(ids).toEqual(expect.arrayContaining(['org-review-b', 'org-review-c']));
+		await setOrgReviewed('org-review-b', false);
+		const after = await listReviewedOrgIds();
+		expect(after).toContain('org-review-c');
+		expect(after).not.toContain('org-review-b');
 	});
 });

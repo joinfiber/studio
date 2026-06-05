@@ -34,16 +34,26 @@ function initClient(): Promise<Client> {
 	const url = env.DATABASE_URL || ':memory:';
 	const client = createClient({ url });
 	return client
-		.execute(
-			`CREATE TABLE IF NOT EXISTS candidates (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				kind TEXT NOT NULL,
-				source_tool TEXT NOT NULL,
-				organizer TEXT,
-				status TEXT NOT NULL DEFAULT 'pending',
-				data TEXT NOT NULL,
-				created_at TEXT NOT NULL
-			)`,
+		.batch(
+			[
+				`CREATE TABLE IF NOT EXISTS candidates (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					kind TEXT NOT NULL,
+					source_tool TEXT NOT NULL,
+					organizer TEXT,
+					status TEXT NOT NULL DEFAULT 'pending',
+					data TEXT NOT NULL,
+					created_at TEXT NOT NULL
+				)`,
+				// Operator-local "I've vetted this venue" overlay for the map cleanup
+				// pass. Studio-local by design: never sent to the Commons (which holds
+				// facts, not editorial state) and invisible to other clones.
+				`CREATE TABLE IF NOT EXISTS org_reviews (
+					org_id TEXT PRIMARY KEY,
+					reviewed_at TEXT NOT NULL
+				)`,
+			],
+			'write',
 		)
 		.then(() => client);
 }
@@ -138,4 +148,33 @@ export async function countCandidates(status = 'pending'): Promise<number> {
 		args: [status],
 	});
 	return Number(res.rows[0]?.n ?? 0);
+}
+
+// ── Org review overlay (map cleanup pass) ──────────────────────────────────
+
+/** True when reviews persist across restarts (a real DATABASE_URL is set).
+ *  In-memory mode still works for the session, but the map warns it's transient. */
+export function reviewsPersistent(): boolean {
+	return !!env.DATABASE_URL;
+}
+
+/** All org ids the operator has marked reviewed. */
+export async function listReviewedOrgIds(): Promise<string[]> {
+	const client = await getClient();
+	const res = await client.execute(`SELECT org_id FROM org_reviews`);
+	return res.rows.map((r) => String((r as unknown as Record<string, unknown>).org_id));
+}
+
+/** Mark (or unmark) a venue reviewed. Idempotent. */
+export async function setOrgReviewed(orgId: string, reviewed: boolean): Promise<void> {
+	const client = await getClient();
+	if (reviewed) {
+		await client.execute({
+			sql: `INSERT INTO org_reviews (org_id, reviewed_at) VALUES (?, ?)
+			      ON CONFLICT(org_id) DO UPDATE SET reviewed_at = excluded.reviewed_at`,
+			args: [orgId, new Date().toISOString()],
+		});
+	} else {
+		await client.execute({ sql: `DELETE FROM org_reviews WHERE org_id = ?`, args: [orgId] });
+	}
 }
