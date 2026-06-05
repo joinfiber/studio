@@ -84,6 +84,16 @@
 	let week = $state<WeekHours>(emptyWeek());
 	let hoursOpen = $state(false);
 
+	// Edit-mode OSM compare + the record's committed identifiers
+	let osmRefMatch = $state<OsmVenue | null>(null);
+	let osmRefLoading = $state(false);
+	let osmRefTried = $state(false);
+	let editMeta = $state<{
+		placeId: string | null;
+		identifiers: Array<{ propertyID: string; value: string }>;
+	} | null>(null);
+	const osmRef = $derived<OsmVenue | null>(selected ?? osmRefMatch);
+
 	const claimedCount = $derived(data.live ? data.points.filter((p) => p.verified).length : 0);
 	const reviewedCount = $derived(reviewedIds.size);
 	const subjName = $derived(selected?.name ?? editing?.name ?? '');
@@ -158,6 +168,10 @@
 		googleTried = false;
 		week = emptyWeek();
 		hoursOpen = false;
+		osmRefMatch = null;
+		osmRefLoading = false;
+		osmRefTried = false;
+		editMeta = null;
 	}
 	function openPanel(v: OsmVenue) {
 		editing = null;
@@ -193,7 +207,11 @@
 					tags?: string[];
 					openingHoursSpecification?: unknown;
 					verified?: boolean;
-					location?: { geo?: { latitude?: number; longitude?: number } };
+					location?: {
+						id?: string;
+						geo?: { latitude?: number; longitude?: number };
+						identifier?: Array<{ propertyID: string; value: string }>;
+					};
 				};
 			};
 			if (!res.ok || !r.raw) {
@@ -222,6 +240,10 @@
 			};
 			original = { ...draft };
 			week = weekFromSpec(raw.openingHoursSpecification);
+			editMeta = {
+				placeId: raw.location?.id ?? null,
+				identifiers: Array.isArray(raw.location?.identifier) ? raw.location.identifier : [],
+			};
 		} catch (e) {
 			toast.push(e instanceof Error ? e.message : 'Couldn’t load venue.', 'error');
 			closePanel();
@@ -234,8 +256,7 @@
 		editing = null;
 		draft = null;
 		original = null;
-		google = null;
-		googleTried = false;
+		resetPanelExtras();
 	}
 
 	async function copy(text: string) {
@@ -270,8 +291,38 @@
 		}
 	}
 
+	async function loadOsmMatch() {
+		if (!editing || osmRefLoading) return;
+		osmRefLoading = true;
+		try {
+			const { lat, lng, name } = editing;
+			const dd = 0.0025; // ~250 m box around the venue
+			const res = await fetch(`/map/osm?s=${lat - dd}&w=${lng - dd}&n=${lat + dd}&e=${lng + dd}`);
+			const r = (await res.json().catch(() => ({}))) as { venues?: OsmVenue[] };
+			const target = name.toLowerCase();
+			let best: OsmVenue | null = null;
+			let bestScore = Infinity;
+			for (const vn of r.venues ?? []) {
+				const dist = Math.hypot(vn.lat - lat, vn.lng - lng);
+				const nameMatch = vn.name.toLowerCase().includes(target) || target.includes(vn.name.toLowerCase());
+				const score = dist - (nameMatch ? 0.002 : 0); // lightly prefer a name match
+				if (score < bestScore) {
+					bestScore = score;
+					best = vn;
+				}
+			}
+			osmRefMatch = best;
+			if (!best) toast.push('No OSM venue found nearby.', 'info', 2000);
+		} catch {
+			toast.push('OSM lookup failed.', 'error');
+		} finally {
+			osmRefLoading = false;
+			osmRefTried = true;
+		}
+	}
+
 	function fillHoursFromOsm() {
-		const raw = selected?.openingHoursRaw;
+		const raw = osmRef?.openingHoursRaw;
 		const parsed = raw ? parseOsmHours(raw) : null;
 		if (!parsed) {
 			toast.push(raw ? 'Couldn’t read OSM hours — enter by hand.' : 'No OSM hours for this venue.', 'info', 2500);
@@ -634,7 +685,7 @@
 
 		{#if (selected || editing) && draft}
 			{@const isEdit = !!editing}
-			{@const addr = selected ? fmtAddr(selected.address) : ''}
+			{@const addr = osmRef ? fmtAddr(osmRef.address) : ''}
 			{@const gq = encodeURIComponent(`${subjName} ${addr}`.trim())}
 			<aside class="panel" transition:fly={{ x: 360, duration: 200 }}>
 				<div class="panel-head">
@@ -654,25 +705,38 @@
 
 				{#if editLoading}<div class="panel-loading">Loading venue…</div>{/if}
 
-				{#if selected}
-					{@const s = selected}
+				{#if osmRef}
+					{@const s = osmRef}
 					<div class="ref">
-						<div class="ref-title">Reference (OpenStreetMap)</div>
+						<div class="ref-title">{isEdit ? 'Nearest OSM match' : 'Reference (OpenStreetMap)'}</div>
+						{#if isEdit}<div class="ref-sub">{s.name}</div>{/if}
 						{#if addr}
 							<div class="ref-row"><span class="ref-val">{addr}</span><button class="copy" onclick={() => copy(addr)}>copy</button></div>
 						{/if}
 						{#if s.website}
 							{@const web = s.website}
-							<div class="ref-row"><a class="ref-val" href={web} target="_blank" rel="noopener noreferrer">{web}</a><button class="copy" onclick={() => copy(web)}>copy</button></div>
+							<div class="ref-row"><a class="ref-val" href={web} target="_blank" rel="noopener noreferrer">{web}</a><button class="copy" onclick={() => copy(web)}>copy</button><button class="use" onclick={() => useGoogle('website', web)}>use</button></div>
 						{/if}
 						{#if s.phone}
 							{@const tel = s.phone}
-							<div class="ref-row"><span class="ref-val">{tel}</span><button class="copy" onclick={() => copy(tel)}>copy</button></div>
+							<div class="ref-row"><span class="ref-val">{tel}</span><button class="copy" onclick={() => copy(tel)}>copy</button><button class="use" onclick={() => useGoogle('phone', tel)}>use</button></div>
 						{/if}
 						{#each s.sameAs ?? [] as so}
 							<div class="ref-row"><a class="ref-val" href={so} target="_blank" rel="noopener noreferrer">{so}</a><button class="copy" onclick={() => copy(so)}>copy</button></div>
 						{/each}
-						<a class="gsearch" href={`https://www.google.com/search?q=${gq}`} target="_blank" rel="noopener noreferrer">Search Google ↗</a>
+						{#if !isEdit}
+							<a class="gsearch" href={`https://www.google.com/search?q=${gq}`} target="_blank" rel="noopener noreferrer">Search Google ↗</a>
+						{/if}
+					</div>
+				{:else if isEdit}
+					<div class="gcompare">
+						{#if !osmRefTried}
+							<button class="compare-btn" onclick={loadOsmMatch} disabled={osmRefLoading}>
+								{osmRefLoading ? 'Checking OSM…' : 'Compare with OSM'}
+							</button>
+						{:else}
+							<div class="gnone">No OSM match nearby.</div>
+						{/if}
 					</div>
 				{/if}
 
@@ -736,7 +800,7 @@
 					<div class="hours-head">
 						<span class="form-title">Hours</span>
 						<div class="hours-fill">
-							{#if selected?.openingHoursRaw}<button class="mini" onclick={fillHoursFromOsm}>from OSM</button>{/if}
+							{#if osmRef?.openingHoursRaw}<button class="mini" onclick={fillHoursFromOsm}>from OSM</button>{/if}
 							{#if google?.hoursPeriods.length}<button class="mini" onclick={fillHoursFromGoogle}>from Google</button>{/if}
 							<button class="mini" onclick={() => (hoursOpen = !hoursOpen)}>{hoursOpen ? 'hide' : 'edit'}</button>
 						</div>
@@ -763,6 +827,31 @@
 						</div>
 					{:else if hasAnyHours(week)}
 						<div class="hours-summary">{hoursSetCount(week)} day{hoursSetCount(week) === 1 ? '' : 's'} set</div>
+					{/if}
+				</div>
+
+				<div class="ids">
+					<div class="form-title">Identifiers</div>
+					{#if isEdit}
+						<div class="id-row"><span class="id-k">org</span><code class="id-v">{editing?.id}</code><button class="copy" onclick={() => copy(editing?.id ?? '')}>copy</button></div>
+						{#if editMeta?.placeId}
+							<div class="id-row"><span class="id-k">place</span><code class="id-v">{editMeta.placeId}</code><button class="copy" onclick={() => copy(editMeta?.placeId ?? '')}>copy</button></div>
+						{/if}
+						{#each editMeta?.identifiers ?? [] as id}
+							<div class="id-row"><span class="id-k">{id.propertyID}</span><code class="id-v">{id.value}</code><button class="copy" onclick={() => copy(id.value)}>copy</button></div>
+						{/each}
+						{#if editMeta && !editMeta.identifiers.length}
+							<div class="id-none">No external ID on this record. Existing venues can't be backfilled yet (the Commons has no place update) — newly added ones always get one.</div>
+						{/if}
+						{#if google?.placeId}
+							<div class="id-row"><span class="id-k">google now</span><code class="id-v">{google.placeId}</code></div>
+						{/if}
+					{:else if selected}
+						<div class="id-row"><span class="id-k">osm</span><code class="id-v">{selected.osmType}/{selected.osmId}</code></div>
+						{#if google?.placeId}
+							<div class="id-row"><span class="id-k">googlePlaceId</span><code class="id-v">{google.placeId}</code></div>
+						{/if}
+						<div class="id-note">Committed as this place's external ID on add — Google place_id if found, else the OSM ref.</div>
 					{/if}
 				</div>
 
@@ -1298,6 +1387,52 @@
 	.hours-summary {
 		font-size: 0.76rem;
 		color: #888;
+	}
+	.ref-sub {
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: #333;
+		margin: -0.15rem 0 0.35rem;
+	}
+	.ids {
+		margin-bottom: 0.9rem;
+	}
+	.id-row {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.12rem 0;
+		font-size: 0.75rem;
+	}
+	.id-k {
+		flex-shrink: 0;
+		width: 6rem;
+		color: #999;
+	}
+	.id-v {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+		font-size: 0.72rem;
+		color: #444;
+		background: #f6f6f6;
+		padding: 0.1rem 0.3rem;
+		border-radius: 3px;
+	}
+	.id-none {
+		font-size: 0.74rem;
+		color: #b45309;
+		line-height: 1.4;
+		padding: 0.2rem 0;
+	}
+	.id-note {
+		font-size: 0.72rem;
+		color: #aaa;
+		line-height: 1.4;
+		margin-top: 0.25rem;
 	}
 	code {
 		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;

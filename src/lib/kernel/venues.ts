@@ -30,6 +30,10 @@ export interface VenueInput {
 	method?: string;
 	/** schema.org OpeningHoursSpecification[] — the operator's curated hours. */
 	openingHours?: unknown[];
+	/** OSM source ref, used as the place's external ID when no Google place_id
+	 *  is available (ecosystem convention: `osm:type/id`). */
+	osmType?: string;
+	osmId?: number;
 }
 
 export async function createVenue(
@@ -45,12 +49,20 @@ export async function createVenue(
 		googlePlaceId = (await findGooglePlaceId(q, { lat: v.lat, lng: v.lng })) ?? undefined;
 	}
 
+	// Every venue should commit a stable external ID (surfaced in the place's
+	// identifier[]). Prefer Google's place_id; fall back to the OSM ref so an
+	// instance without a Google key still records a durable cross-source key —
+	// matching the existing `osm:type/id` convention in the Commons.
+	const externalId =
+		googlePlaceId ??
+		(v.osmType && Number.isFinite(v.osmId) ? `osm:${v.osmType}/${v.osmId}` : undefined);
+
 	const place = await sdk.POST('/service/places', {
 		body: {
 			name: v.name,
 			geo: { latitude: v.lat, longitude: v.lng },
 			address: v.address,
-			googlePlaceId,
+			googlePlaceId: externalId,
 		} as PlaceInput,
 	});
 	if (!place.data) {

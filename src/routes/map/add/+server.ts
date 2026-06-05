@@ -34,6 +34,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		sameAs: v.sameAs,
 		tags: v.category ? [v.category] : undefined,
 		openingHours: v.openingHours,
+		osmType: v.osmType,
+		osmId: v.osmId,
 		method: 'proxied', // relayed from OpenStreetMap, a public source
 	});
 	if (result.error) return json({ error: result.error }, { status: 400 });
