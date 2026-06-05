@@ -662,9 +662,9 @@
 			<button class:active={filter === 'reviewed'} onclick={() => applyFilter('reviewed')}>Reviewed</button>
 		</div>
 		<span class="rev-count">{reviewedCount} reviewed</span>
-		{#if !data.reviewPersistent}
-			<span class="rev-warn" title="Set DATABASE_URL (Turso or a Railway volume) so review progress survives restarts.">
-				⚠ review state is in-memory — resets on restart
+		{#if data.reviewWarning}
+			<span class="rev-warn" title="Set STUDIO_DATABASE_URL to a persistent volume so review progress survives restarts.">
+				⚠ {data.reviewWarning}
 			</span>
 		{/if}
 	</div>

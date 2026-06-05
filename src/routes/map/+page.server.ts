@@ -3,7 +3,7 @@ import { env } from '$env/dynamic/private';
 import type { Organization } from 'neighborhood-commons';
 import { getCapability } from '$lib/kernel/capabilities.js';
 import { googlePlacesConfigured } from '$lib/kernel/google-places.js';
-import { listReviewedOrgIds, reviewsPersistent } from '$lib/kernel/db.js';
+import { listReviewedOrgIds, reviewWarning } from '$lib/kernel/db.js';
 
 export interface OrgPoint {
 	id: string;
@@ -24,14 +24,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const { commons } = locals;
 	const capability = getCapability('map');
 	const googleReady = googlePlacesConfigured();
-	const reviewPersistent = reviewsPersistent();
 	const reviewedSet = new Set<string>(await listReviewedOrgIds().catch(() => []));
+	const reviewWarn = reviewWarning(); // after init, so it reflects a failed file open
 	const styleUrl = env.MAPTILER_API_KEY
 		? `https://api.maptiler.com/maps/dataviz/style.json?key=${env.MAPTILER_API_KEY}`
 		: null;
 
 	if (!commons.configured || !commons.sdk) {
-		return { live: false as const, mapReady: !!styleUrl, styleUrl, capability, googleReady, reviewPersistent, points: [] as OrgPoint[] };
+		return { live: false as const, mapReady: !!styleUrl, styleUrl, capability, googleReady, reviewWarning: reviewWarn, points: [] as OrgPoint[] };
 	}
 
 	const points: OrgPoint[] = [];
@@ -67,7 +67,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			styleUrl,
 			capability,
 			googleReady,
-			reviewPersistent,
+			reviewWarning: reviewWarn,
 			points,
 			truncated,
 			error: err instanceof Error ? err.message : 'Failed to load organizations.',
@@ -80,7 +80,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		styleUrl,
 		capability,
 		googleReady,
-		reviewPersistent,
+		reviewWarning: reviewWarn,
 		points,
 		truncated,
 		error: null as string | null,

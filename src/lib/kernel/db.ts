@@ -31,6 +31,7 @@ export interface StoredCandidate {
 }
 
 let clientPromise: Promise<Client> | null = null;
+let dbWarning: string | null = null;
 
 const SUPPORTED_DB_SCHEME = /^(file:|libsql:|wss?:|https?:|:memory:)/;
 
@@ -52,7 +53,18 @@ function resolveDbUrl(): string {
 }
 
 function initClient(): Promise<Client> {
-	const client = createClient({ url: resolveDbUrl() });
+	const url = resolveDbUrl();
+	let client: Client;
+	try {
+		client = createClient({ url });
+	} catch (err) {
+		// e.g. a file: path whose directory doesn't exist (wrong volume mount).
+		// Don't take the store (and every review write) down — fall back to
+		// in-memory and surface a precise warning instead of a 500.
+		dbWarning = `couldn't open ${url} — check the volume mount path; reviews are in-memory and won't persist`;
+		console.error(`[db] ${dbWarning}:`, err);
+		client = createClient({ url: ':memory:' });
+	}
 	return client
 		.batch(
 			[
@@ -172,10 +184,17 @@ export async function countCandidates(status = 'pending'): Promise<number> {
 
 // ── Org review overlay (map cleanup pass) ──────────────────────────────────
 
-/** True when reviews persist across restarts (a real DATABASE_URL is set).
- *  In-memory mode still works for the session, but the map warns it's transient. */
-export function reviewsPersistent(): boolean {
-	return resolveDbUrl() !== ':memory:';
+/**
+ * A user-facing warning about review-state durability, or null when it persists.
+ * Accurate only after the client has initialized (e.g. after a query like
+ * listReviewedOrgIds), since a failed file open is detected at connect time.
+ */
+export function reviewWarning(): string | null {
+	if (dbWarning) return dbWarning;
+	if (resolveDbUrl() === ':memory:') {
+		return 'review state is in-memory — set STUDIO_DATABASE_URL to a persistent volume to keep it across restarts';
+	}
+	return null;
 }
 
 /** All org ids the operator has marked reviewed. */
