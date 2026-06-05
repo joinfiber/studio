@@ -86,6 +86,8 @@ export interface VenueCandidate {
 	website?: string;
 	phone?: string;
 	sameAs: string[];
+	/** Raw OSM `opening_hours` tag, if present — parsed in the curation panel. */
+	openingHoursRaw?: string;
 	/** Descriptive OSM tag value (e.g. "bar", "cafe") → Organization tag. */
 	category: string;
 	osmType: string;
@@ -167,6 +169,7 @@ export function mapOverpassElements(elements: OverpassElement[], limit: number):
 			website: contact.website,
 			phone: contact.phone,
 			sameAs: contact.sameAs,
+			openingHoursRaw: tags.opening_hours || undefined,
 			category: categoryOf(tags),
 			osmType: el.type,
 			osmId: el.id,

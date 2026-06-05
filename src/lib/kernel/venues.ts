@@ -28,6 +28,8 @@ export interface VenueInput {
 	 *  source); omit to take the Commons default ('seeded'). Honored once the
 	 *  Commons accepts caller-set method; harmless (stripped) before then. */
 	method?: string;
+	/** schema.org OpeningHoursSpecification[] — the operator's curated hours. */
+	openingHours?: unknown[];
 }
 
 export async function createVenue(
@@ -67,6 +69,10 @@ export async function createVenue(
 		primaryPlaceId: placeId,
 	};
 	if (v.method) orgBody.method = v.method;
+	// openingHoursSpecification may also lag the SDK type; attach at runtime.
+	if (v.openingHours?.length) {
+		(orgBody as Record<string, unknown>).openingHoursSpecification = v.openingHours;
+	}
 	const org = await sdk.POST('/service/organizations', { body: orgBody });
 	if (!org.data) {
 		const status = org.response.status;

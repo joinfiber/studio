@@ -7,6 +7,18 @@
 	import CapabilityGuide from '$lib/kernel/chrome/CapabilityGuide.svelte';
 	import Toast from '$lib/kernel/chrome/Toast.svelte';
 	import { toast } from '$lib/kernel/chrome/toast.svelte.js';
+	import {
+		emptyWeek,
+		parseOsmHours,
+		weekFromGooglePeriods,
+		weekToSpec,
+		hasAnyHours,
+		applyToWeekdays,
+		applyToAll,
+		DAYS,
+		type WeekHours,
+	} from '$lib/kernel/hours.js';
+	import type { GoogleDetails } from '$lib/kernel/google-details.js';
 
 	type OsmVenue = {
 		name: string;
@@ -16,6 +28,7 @@
 		website?: string;
 		phone?: string;
 		sameAs?: string[];
+		openingHoursRaw?: string;
 		category?: string;
 		osmType: string;
 		osmId: number;
@@ -44,6 +57,13 @@
 	let selected = $state<OsmVenue | null>(null);
 	let draft = $state<Draft | null>(null);
 	let adding = $state(false);
+
+	// Google reference (display-only) + hours editor
+	let google = $state<GoogleDetails | null>(null);
+	let googleLoading = $state(false);
+	let googleTried = $state(false);
+	let week = $state<WeekHours>(emptyWeek());
+	let hoursOpen = $state(false);
 
 	const claimedCount = $derived(data.live ? data.points.filter((p) => p.verified).length : 0);
 	const MIN_OSM_ZOOM = 13;
@@ -92,6 +112,11 @@
 			sameAs: (v.sameAs ?? []).join(', '),
 			tags: v.category ?? '',
 		};
+		google = null;
+		googleLoading = false;
+		googleTried = false;
+		week = emptyWeek();
+		hoursOpen = false;
 	}
 	function closePanel() {
 		selected = null;
@@ -104,6 +129,62 @@
 		} catch {
 			toast.push('Copy failed', 'error');
 		}
+	}
+
+	async function loadGoogle() {
+		if (!selected || googleLoading) return;
+		googleLoading = true;
+		try {
+			const res = await fetch('/map/google', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name: selected.name, lat: selected.lat, lng: selected.lng }),
+			});
+			const r = (await res.json().catch(() => ({}))) as { details?: GoogleDetails | null; error?: string };
+			if (!res.ok) {
+				toast.push(String(r.error ?? 'Google lookup failed.'), 'error');
+			} else {
+				google = r.details ?? null;
+			}
+		} catch (e) {
+			toast.push(e instanceof Error ? e.message : 'Google lookup failed.', 'error');
+		} finally {
+			googleLoading = false;
+			googleTried = true;
+		}
+	}
+
+	function fillHoursFromOsm() {
+		const raw = selected?.openingHoursRaw;
+		const parsed = raw ? parseOsmHours(raw) : null;
+		if (!parsed) {
+			toast.push(raw ? 'Couldn’t read OSM hours — enter by hand.' : 'No OSM hours for this venue.', 'info', 2500);
+			return;
+		}
+		week = parsed;
+		hoursOpen = true;
+	}
+	function fillHoursFromGoogle() {
+		if (!google?.hoursPeriods.length) {
+			toast.push('No Google hours available.', 'info', 2000);
+			return;
+		}
+		week = weekFromGooglePeriods(google.hoursPeriods);
+		hoursOpen = true;
+	}
+	function useGoogle(field: 'name' | 'website' | 'phone', value: string | null) {
+		if (!draft || !value) return;
+		draft[field] = value;
+		toast.push('Applied', 'success', 900);
+	}
+	function spreadWeekdays() {
+		week = applyToWeekdays(week, 0);
+	}
+	function spreadAll() {
+		week = applyToAll(week, 0);
+	}
+	function hoursSetCount(w: WeekHours): number {
+		return w.filter((d) => !d.closed && d.open && d.close).length;
 	}
 
 	async function addSelected() {
@@ -120,6 +201,7 @@
 			phone: d.phone.trim() || undefined,
 			sameAs: d.sameAs.split(',').map((s) => s.trim()).filter(Boolean),
 			category: d.tags.trim() || v.category,
+			openingHours: hasAnyHours(week) ? weekToSpec(week) : undefined,
 			osmType: v.osmType,
 			osmId: v.osmId,
 		};
@@ -355,6 +437,46 @@
 					<a class="gsearch" href={`https://www.google.com/search?q=${gq}`} target="_blank" rel="noopener noreferrer">Search Google ↗</a>
 				</div>
 
+				{#if data.googleReady}
+					<div class="gcompare">
+						{#if !googleTried}
+							<button class="compare-btn" onclick={loadGoogle} disabled={googleLoading}>
+								{googleLoading ? 'Checking Google…' : 'Compare with Google'}
+							</button>
+						{:else if google}
+							{@const g = google}
+							<div class="ref google">
+								<div class="ref-title">Google <span class="ref-note">reference only · not stored</span></div>
+								{#if g.name}
+									<div class="ref-row"><span class="ref-val">{g.name}</span><button class="use" onclick={() => useGoogle('name', g.name)}>use</button></div>
+								{/if}
+								{#if g.address}
+									<div class="ref-row"><span class="ref-val">{g.address}</span><button class="copy" onclick={() => copy(g.address ?? '')}>copy</button></div>
+								{/if}
+								{#if g.website}
+									{@const gw = g.website}
+									<div class="ref-row"><a class="ref-val" href={gw} target="_blank" rel="noopener noreferrer">{gw}</a><button class="use" onclick={() => useGoogle('website', gw)}>use</button></div>
+								{/if}
+								{#if g.phone}
+									{@const gp = g.phone}
+									<div class="ref-row"><span class="ref-val">{gp}</span><button class="use" onclick={() => useGoogle('phone', gp)}>use</button></div>
+								{/if}
+								{#if g.hoursText.length}
+									<div class="ghours">
+										{#each g.hoursText as line}<div class="ghours-line">{line}</div>{/each}
+									</div>
+								{/if}
+								{#if g.googleMapsUri}
+									{@const gm = g.googleMapsUri}
+									<a class="gsearch" href={gm} target="_blank" rel="noopener noreferrer">Open in Google Maps ↗</a>
+								{/if}
+							</div>
+						{:else}
+							<div class="gnone">No Google match found.</div>
+						{/if}
+					</div>
+				{/if}
+
 				<div class="form">
 					<div class="form-title">Curate &amp; add</div>
 					<label class="f"><span>Name</span><input type="text" bind:value={draft.name} /></label>
@@ -364,10 +486,44 @@
 					<label class="f"><span>Tags <em>(comma-separated)</em></span><input type="text" bind:value={draft.tags} /></label>
 				</div>
 
+				<div class="hours">
+					<div class="hours-head">
+						<span class="form-title">Hours</span>
+						<div class="hours-fill">
+							{#if selected.openingHoursRaw}<button class="mini" onclick={fillHoursFromOsm}>from OSM</button>{/if}
+							{#if google?.hoursPeriods.length}<button class="mini" onclick={fillHoursFromGoogle}>from Google</button>{/if}
+							<button class="mini" onclick={() => (hoursOpen = !hoursOpen)}>{hoursOpen ? 'hide' : 'edit'}</button>
+						</div>
+					</div>
+					{#if hoursOpen}
+						<div class="hours-grid">
+							{#each week as day, i}
+								<div class="hrow" class:off={day.closed}>
+									<span class="hday">{DAYS[i].slice(0, 3)}</span>
+									{#if day.closed}
+										<span class="hclosed-label">closed</span>
+									{:else}
+										<input class="htime" type="text" inputmode="numeric" bind:value={week[i].open} placeholder="09:00" />
+										<span class="hdash">–</span>
+										<input class="htime" type="text" inputmode="numeric" bind:value={week[i].close} placeholder="17:00" />
+									{/if}
+									<label class="hcheck" title="Closed this day"><input type="checkbox" bind:checked={week[i].closed} /></label>
+								</div>
+							{/each}
+							<div class="hours-quick">
+								<button class="mini" onclick={spreadWeekdays}>Mon → weekdays</button>
+								<button class="mini" onclick={spreadAll}>Mon → all</button>
+							</div>
+						</div>
+					{:else if hasAnyHours(week)}
+						<div class="hours-summary">{hoursSetCount(week)} day{hoursSetCount(week) === 1 ? '' : 's'} set</div>
+					{/if}
+				</div>
+
 				<div class="panel-actions">
 					<button class="primary" onclick={addSelected} disabled={adding}>{adding ? 'Adding…' : 'Add to Commons'}</button>
 				</div>
-				<p class="panel-note">Adds as <strong>proxied</strong> (relayed from OSM). Hours + a Google-data compare land next.</p>
+				<p class="panel-note">Adds as <strong>proxied</strong> — relayed from OSM. Google data is shown for reference only and is never stored.</p>
 			</aside>
 		{/if}
 	</div>
@@ -645,6 +801,158 @@
 		color: #999;
 		margin: 0.6rem 0 0;
 		line-height: 1.4;
+	}
+	.gcompare {
+		margin-bottom: 0.9rem;
+	}
+	.compare-btn {
+		width: 100%;
+		font-family: inherit;
+		font-size: 0.82rem;
+		color: #444;
+		background: #fff;
+		border: 1px solid #d8d8d8;
+		border-radius: 6px;
+		padding: 0.45rem 0.75rem;
+		cursor: pointer;
+	}
+	.compare-btn:hover:not(:disabled) {
+		border-color: #4285f4;
+		color: #1a73e8;
+	}
+	.compare-btn:disabled {
+		opacity: 0.6;
+		cursor: default;
+	}
+	.ref.google {
+		background: #f6f9ff;
+		border-color: #dbe6fb;
+		margin-bottom: 0;
+	}
+	.ref-note {
+		font-weight: 400;
+		text-transform: none;
+		letter-spacing: 0;
+		color: #aab;
+		font-size: 0.9em;
+	}
+	.use {
+		flex-shrink: 0;
+		font-family: inherit;
+		font-size: 0.68rem;
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+		color: #1a73e8;
+		background: #fff;
+		border: 1px solid #c7d8f7;
+		border-radius: 4px;
+		padding: 0.1rem 0.45rem;
+		cursor: pointer;
+	}
+	.use:hover {
+		background: #1a73e8;
+		color: #fff;
+	}
+	.ghours {
+		margin-top: 0.35rem;
+		padding-top: 0.35rem;
+		border-top: 1px solid #e6eefb;
+	}
+	.ghours-line {
+		font-size: 0.74rem;
+		color: #667;
+		line-height: 1.5;
+	}
+	.gnone {
+		font-size: 0.8rem;
+		color: #999;
+		padding: 0.3rem 0;
+	}
+	.hours {
+		margin-bottom: 0.9rem;
+	}
+	.hours-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		margin-bottom: 0.4rem;
+	}
+	.hours-fill {
+		display: flex;
+		gap: 0.3rem;
+		flex-wrap: wrap;
+	}
+	.mini {
+		font-family: inherit;
+		font-size: 0.7rem;
+		color: #555;
+		background: #f3f3f3;
+		border: 1px solid #e0e0e0;
+		border-radius: 4px;
+		padding: 0.15rem 0.45rem;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.mini:hover {
+		border-color: #166534;
+		color: #166534;
+	}
+	.hours-grid {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+	.hrow {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: 0.8rem;
+	}
+	.hrow.off {
+		opacity: 0.7;
+	}
+	.hday {
+		width: 2.2rem;
+		flex-shrink: 0;
+		color: #666;
+		font-weight: 500;
+	}
+	.hclosed-label {
+		flex: 1;
+		color: #aaa;
+		font-style: italic;
+	}
+	.htime {
+		width: 4rem;
+		font-family: inherit;
+		font-size: 0.82rem;
+		text-align: center;
+		padding: 0.2rem 0.3rem;
+		border: 1px solid #d0d0d0;
+		border-radius: 4px;
+	}
+	.htime:focus {
+		outline: none;
+		border-color: #166534;
+	}
+	.hdash {
+		color: #bbb;
+	}
+	.hcheck {
+		margin-left: auto;
+		display: flex;
+		align-items: center;
+		cursor: pointer;
+	}
+	.hours-quick {
+		display: flex;
+		gap: 0.35rem;
+		margin-top: 0.35rem;
+	}
+	.hours-summary {
+		font-size: 0.76rem;
+		color: #888;
 	}
 	code {
 		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;

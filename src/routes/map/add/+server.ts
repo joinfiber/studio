@@ -13,7 +13,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'Commons isn’t configured on this instance.' }, { status: 400 });
 	}
 
-	let body: { venue?: Partial<VenueCandidate> };
+	let body: { venue?: Partial<VenueCandidate> & { openingHours?: unknown[] } };
 	try {
 		body = await request.json();
 	} catch {
@@ -33,6 +33,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		phone: v.phone,
 		sameAs: v.sameAs,
 		tags: v.category ? [v.category] : undefined,
+		openingHours: v.openingHours,
 		method: 'proxied', // relayed from OpenStreetMap, a public source
 	});
 	if (result.error) return json({ error: result.error }, { status: 400 });

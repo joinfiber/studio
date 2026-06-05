@@ -146,9 +146,9 @@ export function getCapabilities(): Capability[] {
 		},
 		{
 			id: 'place-identity',
-			label: 'Stable venue identity',
+			label: 'Stable venue identity + Google compare',
 			unlocks:
-				'Attach a Google Place ID when publishing a place, so the same venue from different contributors dedups to one record. Places still publish without it (deduped on location instead).',
+				'Attach a Google Place ID when publishing a place (so the same venue from different contributors dedups to one record), and show Google’s name/address/phone/hours next to OpenStreetMap’s in the map curation panel for cross-checking. Places still publish without it (deduped on location instead); the Google reference data is shown only, never stored.',
 			prereqs: [
 				{
 					env: 'GOOGLE_PLACES_API_KEY',
