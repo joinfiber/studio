@@ -33,6 +33,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		phone: v.phone,
 		sameAs: v.sameAs,
 		tags: v.category ? [v.category] : undefined,
+		method: 'proxied', // relayed from OpenStreetMap, a public source
 	});
 	if (result.error) return json({ error: result.error }, { status: 400 });
 	return json({ orgId: result.orgId });

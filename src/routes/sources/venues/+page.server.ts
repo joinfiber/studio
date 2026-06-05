@@ -1,11 +1,12 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import type { Client } from 'openapi-fetch';
-import type { paths } from 'neighborhood-commons';
+import type { paths, components } from 'neighborhood-commons';
 import { geocodeArea } from '$lib/kernel/geocode.js';
 import { queryVenues, CATEGORY_GROUPS, type VenueCandidate } from '$lib/tools/venues/overpass.js';
 
 type Sdk = Client<paths>;
+type OrgInput = components['schemas']['OrganizationInput'];
 
 const PUBLISH_CAP = 150; // hard bound on one publish run
 
@@ -22,16 +23,19 @@ async function createVenueOrg(sdk: Sdk, v: VenueCandidate): Promise<{ ok: boolea
 	if (!place.data) {
 		return { ok: false, error: place.error?.error?.message ?? `place ${place.response.status}` };
 	}
-	const org = await sdk.POST('/service/organizations', {
-		body: {
-			name: v.name,
-			url: v.website || undefined,
-			telephone: v.phone || undefined,
-			sameAs: v.sameAs?.length ? v.sameAs : undefined,
-			tags: v.category ? [v.category] : undefined,
-			primaryPlaceId: place.data.place.id,
-		},
-	});
+	// `proxied` — these venues are relayed from OpenStreetMap, a public source.
+	// (Carried on an intersection since the SDK's OrganizationInput type lacks
+	// `method` until the regen ships; the value is sent at runtime regardless.)
+	const orgBody: OrgInput & { method?: string } = {
+		name: v.name,
+		url: v.website || undefined,
+		telephone: v.phone || undefined,
+		sameAs: v.sameAs?.length ? v.sameAs : undefined,
+		tags: v.category ? [v.category] : undefined,
+		primaryPlaceId: place.data.place.id,
+		method: 'proxied',
+	};
+	const org = await sdk.POST('/service/organizations', { body: orgBody });
 	if (!org.data) {
 		const status = org.response.status;
 		// Slug collision = this org name already exists; treat as a soft skip.

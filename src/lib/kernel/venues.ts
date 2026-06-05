@@ -13,6 +13,7 @@ import type { GeocodedAddress } from './geocode.js';
 
 type Sdk = Client<paths>;
 type PlaceInput = components['schemas']['PlaceInput'];
+type OrgInput = components['schemas']['OrganizationInput'];
 
 export interface VenueInput {
 	name: string;
@@ -23,6 +24,10 @@ export interface VenueInput {
 	phone?: string;
 	sameAs?: string[];
 	tags?: string[];
+	/** Provenance for the org. OSM/scrape imports are 'proxied' (a public
+	 *  source); omit to take the Commons default ('seeded'). Honored once the
+	 *  Commons accepts caller-set method; harmless (stripped) before then. */
+	method?: string;
 }
 
 export async function createVenue(
@@ -51,16 +56,18 @@ export async function createVenue(
 	}
 	const placeId = place.data.place.id;
 
-	const org = await sdk.POST('/service/organizations', {
-		body: {
-			name: v.name,
-			url: v.website || undefined,
-			telephone: v.phone || undefined,
-			sameAs: v.sameAs?.length ? v.sameAs : undefined,
-			tags: v.tags?.length ? v.tags : undefined,
-			primaryPlaceId: placeId,
-		},
-	});
+	// `method` isn't on the SDK's OrganizationInput type yet (regen pending), so
+	// carry it on an intersection — the value is sent at runtime regardless.
+	const orgBody: OrgInput & { method?: string } = {
+		name: v.name,
+		url: v.website || undefined,
+		telephone: v.phone || undefined,
+		sameAs: v.sameAs?.length ? v.sameAs : undefined,
+		tags: v.tags?.length ? v.tags : undefined,
+		primaryPlaceId: placeId,
+	};
+	if (v.method) orgBody.method = v.method;
+	const org = await sdk.POST('/service/organizations', { body: orgBody });
 	if (!org.data) {
 		const status = org.response.status;
 		return {
