@@ -1,10 +1,10 @@
-# Deploying Studio V3
+# Deploying Studio
 
 How to run your own instance.
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 20.19+ (22 recommended; the repo's `.nvmrc` pins 22)
 - pnpm (or npm/yarn — the lockfile in the source repo is pnpm)
 - A Commons service key. Register at [neighborhood-commons.org/developers](https://neighborhood-commons.org/developers). Standard service keys are scoped to your own organizations; admin keys are issued only to the platform operator.
 

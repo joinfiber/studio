@@ -1,4 +1,4 @@
-# Extending Studio V3
+# Extending Studio
 
 How to add a new ingestion tool to your Studio deployment.
 

@@ -167,7 +167,7 @@
 <section class="card">
 	<h3>About</h3>
 	<p>
-		Studio V3 — an open-source GUI on top of the Neighborhood Commons. See the
+		Studio — an open-source GUI on top of the Neighborhood Commons. See the
 		<a href="/guide">in-app guide</a> for architecture and extension docs.
 	</p>
 </section>

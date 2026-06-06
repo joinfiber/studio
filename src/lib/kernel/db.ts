@@ -154,11 +154,6 @@ export async function getCandidate(id: number): Promise<StoredCandidate | null> 
 	return row ? rowToStored(row as unknown as Record<string, unknown>) : null;
 }
 
-export async function setCandidateStatus(id: number, status: string): Promise<void> {
-	const client = await getClient();
-	await client.execute({ sql: `UPDATE candidates SET status = ? WHERE id = ?`, args: [status, id] });
-}
-
 /** Replace a queued candidate's payload after an inline edit in review. */
 export async function updateCandidate(id: number, candidate: EventCandidate): Promise<void> {
 	const client = await getClient();
@@ -172,15 +167,6 @@ export async function updateCandidate(id: number, candidate: EventCandidate): Pr
 export async function deleteCandidate(id: number): Promise<void> {
 	const client = await getClient();
 	await client.execute({ sql: `DELETE FROM candidates WHERE id = ?`, args: [id] });
-}
-
-export async function countCandidates(status = 'pending'): Promise<number> {
-	const client = await getClient();
-	const res = await client.execute({
-		sql: `SELECT COUNT(*) AS n FROM candidates WHERE status = ?`,
-		args: [status],
-	});
-	return Number(res.rows[0]?.n ?? 0);
 }
 
 // ── Org review overlay (map cleanup pass) ──────────────────────────────────

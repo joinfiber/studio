@@ -47,6 +47,6 @@ export function generateSecret(): string {
 }
 
 /** otpauth:// URI for QR rendering. */
-export function authUrl(secret: string, account = 'operator', issuer = 'Studio V3'): string {
+export function authUrl(secret: string, account = 'operator', issuer = 'Studio'): string {
 	return authenticator.keyuri(account, issuer, secret);
 }

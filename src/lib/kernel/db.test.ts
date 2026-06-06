@@ -3,7 +3,6 @@ import {
 	saveCandidates,
 	listCandidates,
 	getCandidate,
-	setCandidateStatus,
 	updateCandidate,
 	deleteCandidate,
 	setOrgReviewed,
@@ -30,7 +29,7 @@ const mk = (id: string, name: string): EventCandidate => ({
 
 // In-memory libsql (no DATABASE_URL in tests) — exercises the real store.
 describe('candidate store', () => {
-	it('round-trips: save (stamping organizer) → list → status → delete', async () => {
+	it('round-trips: save (stamping organizer) → list → get → delete', async () => {
 		const saved = await saveCandidates([mk('cal-0', 'Round Trip A'), mk('cal-1', 'Round Trip B')], 'Acme Co');
 		expect(saved).toBe(2);
 
@@ -41,12 +40,11 @@ describe('candidate store', () => {
 		expect(a!.organizer).toBe('Acme Co');
 		expect(a!.candidate.data.organizer_name).toBe('Acme Co');
 		expect(a!.source_tool).toBe('calendar');
+		expect((await getCandidate(a!.id))?.candidate.data.name).toBe('Round Trip A');
 
-		await setCandidateStatus(a!.id, 'published');
-		expect((await getCandidate(a!.id))?.status).toBe('published');
-		// published rows leave the pending list
-		expect((await listCandidates('pending')).some((p) => p.id === a!.id)).toBe(false);
-
+		// delete removes a row from the queue
+		await deleteCandidate(a!.id);
+		expect(await getCandidate(a!.id)).toBeNull();
 		const b = pending.find((p) => p.candidate.data.name === 'Round Trip B')!;
 		await deleteCandidate(b.id);
 		expect(await getCandidate(b.id)).toBeNull();

@@ -1,8 +1,8 @@
-# Studio V3
+# Studio
 
 Open-source GUI on top of the [Neighborhood Commons](https://neighborhood-commons.org).
 
-Studio is the operator-facing tool for cataloging neighborhood public facts — venues, events, programs, civic data. This is the third iteration; the first two accreted cruft from a moving Commons target. V3 is built against the stable Commons 3.x contract and a clean kernel/tools seam.
+Studio is the operator-facing tool for cataloging neighborhood public facts — venues, events, programs, civic data. It's the third iteration of the tool, built clean against the stable Commons 3.x contract and a tidy kernel/tools seam.
 
 ## Two ways to use this
 

@@ -5,8 +5,7 @@
  * Provenance: importing someone else's calendar is `proxied` — we relay a
  * third-party source under attribution to its URL. We set that honestly in
  * the candidate (source_method='proxied', source_feed_url=url). The publish
- * adapter handles the current Commons limitation on caller-set proxied
- * (tracked: reference_commons_polish_opportunities 2026-05-14).
+ * adapter handles the current Commons limitation on caller-set proxied.
  */
 
 import { candidateId, type EventCandidate } from '$lib/kernel/candidate.js';

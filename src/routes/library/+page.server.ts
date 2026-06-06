@@ -76,8 +76,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 export const actions: Actions = {
 	// Curate metadata on a live event. Only the fields the Commons exposes as a
 	// true partial update (serviceBatchUpdateEvents) are editable here — title,
-	// date/time, and venue can't be patched via a service key (tracked in
-	// memory/reference_commons_polish_opportunities.md, 2026-05-26).
+	// date/time, and venue can't be patched via a service key (a current
+	// Commons service-API limitation).
 	update: async ({ request, locals }) => {
 		const { commons } = locals;
 		if (!commons.configured || !commons.sdk) {

@@ -1,6 +1,6 @@
 # Architecture
 
-Studio V3 has three layers: **kernel**, **tools**, **operator**.
+Studio has four layers: **kernel**, **tools**, **instance**, **operator**.
 
 ## The kernel (`src/lib/kernel/`)
 
@@ -24,6 +24,10 @@ Clone-baseline programs that ship in every deployment. Each tool:
 Add a tool by creating `src/lib/tools/your-tool-name/` with a candidate producer. See [extending.md](extending.md).
 
 Baseline tools: `calendar/`, `sheets/`, `rss/`, `extract/`, `scrape/`, `venues/`, `submissions/`. (Manual entry of orgs/events/places is the `/add` route, not a `tools/` folder; library management is `/library`.)
+
+## The instance (`src/lib/instance/`)
+
+The operator's read-models of the Commons, plus facts about this deployment's own standing. Where `tools/` *produce* candidates to publish, `instance/` *reads* the Commons back: `mapOrganization` → `LiveOrg` (the Venues route), `mapServiceEvent` → `LiveEvent` (the Library route), and downstream-consumer analytics (the Settings route). Depends only on the Commons SDK types — never on a tool or a route.
 
 ## The operator (`src/lib/operator/`)
 

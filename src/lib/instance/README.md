@@ -7,5 +7,6 @@ Distinct from `tools/` (per-feature ingestion programs) and `kernel/` (shared ch
 Currently:
 
 - **`analytics.ts`** — types + fixtures for downstream consumers (apps that read from this contributor's published data). Surfaces in the Settings route.
+- **`organizations.ts`** / **`library.ts`** — read-model mappers (`mapOrganization` → `LiveOrg`, `mapServiceEvent` → `LiveEvent`) that turn raw Commons records into the shapes the Venues and Library routes render.
 
-Real data wires in when Commons exposes a downstream-consumers endpoint (see `memory/reference_commons_polish_opportunities.md`).
+Real analytics data wires in once the Commons exposes a downstream-consumers endpoint (a planned upstream capability).
