@@ -91,6 +91,7 @@
 	let osmRefTried = $state(false);
 	let editMeta = $state<{
 		placeId: string | null;
+		address: Record<string, string | undefined> | null;
 		identifiers: Array<{ propertyID: string; value: string }>;
 	} | null>(null);
 	const osmRef = $derived<OsmVenue | null>(selected ?? osmRefMatch);
@@ -159,8 +160,10 @@
 		Object.assign(f.properties, props);
 		setOrgs();
 	}
-	function fmtAddr(a?: OsmVenue['address']): string {
-		return a ? [a.streetAddress, a.addressLocality, a.addressRegion].filter(Boolean).join(', ') : '';
+	function fmtAddr(a?: Record<string, string | undefined> | null): string {
+		return a
+			? [a.streetAddress, a.addressLocality, a.addressRegion, a.postalCode].filter(Boolean).join(', ')
+			: '';
 	}
 
 	function resetPanelExtras() {
@@ -210,6 +213,7 @@
 					verified?: boolean;
 					location?: {
 						id?: string;
+						address?: Record<string, string | undefined>;
 						geo?: { latitude?: number; longitude?: number };
 						identifier?: Array<{ propertyID: string; value: string }>;
 					};
@@ -243,6 +247,7 @@
 			week = weekFromSpec(raw.openingHoursSpecification);
 			editMeta = {
 				placeId: raw.location?.id ?? null,
+				address: raw.location?.address ?? null,
 				identifiers: Array.isArray(raw.location?.identifier) ? raw.location.identifier : [],
 			};
 		} catch (e) {
@@ -841,27 +846,34 @@
 				</div>
 
 				<div class="ids">
-					<div class="form-title">Identifiers</div>
+					<div class="form-title">Place</div>
 					{#if isEdit}
-						<div class="id-row"><span class="id-k">org</span><code class="id-v">{editing?.id}</code><button class="copy" onclick={() => copy(editing?.id ?? '')}>copy</button></div>
-						{#if editMeta?.placeId}
-							<div class="id-row"><span class="id-k">place</span><code class="id-v">{editMeta.placeId}</code><button class="copy" onclick={() => copy(editMeta?.placeId ?? '')}>copy</button></div>
+						{@const pa = fmtAddr(editMeta?.address)}
+						{#if pa}
+							<div class="addr">{pa}</div>
+						{:else if editMeta}
+							<div class="id-none">No address on this place.</div>
 						{/if}
+						<div class="id-row"><span class="id-k">place</span><code class="id-v">{editMeta?.placeId ?? '—'}</code>{#if editMeta?.placeId}<button class="copy" onclick={() => copy(editMeta?.placeId ?? '')}>copy</button>{/if}</div>
+						<div class="id-row"><span class="id-k">org</span><code class="id-v">{editing?.id}</code><button class="copy" onclick={() => copy(editing?.id ?? '')}>copy</button></div>
 						{#each editMeta?.identifiers ?? [] as id}
 							<div class="id-row"><span class="id-k">{id.propertyID}</span><code class="id-v">{id.value}</code><button class="copy" onclick={() => copy(id.value)}>copy</button></div>
 						{/each}
 						{#if editMeta && !editMeta.identifiers.length}
-							<div class="id-none">No external ID on this record. Existing venues can't be backfilled yet (the Commons has no place update) — newly added ones always get one.</div>
+							<div class="id-row"><span class="id-k">external id</span><span class="id-missing">none</span></div>
 						{/if}
 						{#if google?.placeId}
 							<div class="id-row"><span class="id-k">google now</span><code class="id-v">{google.placeId}</code></div>
 						{/if}
+						<div class="id-note">Address &amp; identity live on the <strong>Place</strong> — read-only here (the Commons has no place update yet). Name, contact, socials &amp; hours above are the editable <strong>Organization</strong>.</div>
 					{:else if selected}
+						{@const pa = fmtAddr(selected.address)}
+						{#if pa}<div class="addr">{pa}</div>{/if}
 						<div class="id-row"><span class="id-k">osm</span><code class="id-v">{selected.osmType}/{selected.osmId}</code></div>
 						{#if google?.placeId}
 							<div class="id-row"><span class="id-k">googlePlaceId</span><code class="id-v">{google.placeId}</code></div>
 						{/if}
-						<div class="id-note">Committed as this place's external ID on add — Google place_id if found, else the OSM ref.</div>
+						<div class="id-note">This address + external ID are committed to the new <strong>Place</strong> on add (Google place_id if found, else the OSM ref).</div>
 					{/if}
 				</div>
 
@@ -1448,6 +1460,18 @@
 		color: #aaa;
 		line-height: 1.4;
 		margin-top: 0.25rem;
+	}
+	.addr {
+		font-size: 0.84rem;
+		color: #222;
+		font-weight: 500;
+		margin-bottom: 0.4rem;
+		line-height: 1.4;
+	}
+	.id-missing {
+		font-size: 0.72rem;
+		color: #b45309;
+		font-style: italic;
 	}
 	code {
 		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
