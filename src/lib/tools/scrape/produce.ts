@@ -16,22 +16,18 @@ import { assertSafeUrl, safeFetch } from '$lib/kernel/tool.js';
 import { extractEventsFromText } from '$lib/tools/extract/llm.js';
 import { candidatesFromExtracted } from '$lib/tools/extract/produce.js';
 import { commonsUserAgent } from '$lib/kernel/commons-client.js';
+import { decodeEntities } from '$lib/kernel/html.js';
 
 export function htmlToText(html: string): string {
-	return html
+	const stripped = html
 		.replace(/<script[\s\S]*?<\/script>/gi, ' ')
 		.replace(/<style[\s\S]*?<\/style>/gi, ' ')
 		.replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
 		.replace(/<!--[\s\S]*?-->/g, ' ')
 		.replace(/<\/(p|div|li|tr|h[1-6])>/gi, '\n')
 		.replace(/<br\s*\/?>/gi, '\n')
-		.replace(/<[^>]+>/g, ' ')
-		.replace(/&nbsp;/g, ' ')
-		.replace(/&amp;/g, '&')
-		.replace(/&lt;/g, '<')
-		.replace(/&gt;/g, '>')
-		.replace(/&quot;/g, '"')
-		.replace(/&#39;/g, "'")
+		.replace(/<[^>]+>/g, ' ');
+	return decodeEntities(stripped)
 		.replace(/[ \t]+/g, ' ')
 		.replace(/\n{3,}/g, '\n\n')
 		.trim();

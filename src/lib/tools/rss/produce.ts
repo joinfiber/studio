@@ -10,6 +10,7 @@
  */
 
 import { candidateId, type EventCandidate } from '$lib/kernel/candidate.js';
+import { decodeEntities } from '$lib/kernel/html.js';
 import { safeFetch } from '$lib/kernel/tool.js';
 import { parseFeed } from './parse.js';
 
@@ -27,14 +28,7 @@ export function toInstant(dateStr: string | null): string | null {
 function stripHtml(s: string | null): string | null {
 	if (!s) return null;
 	return (
-		s
-			.replace(/<[^>]+>/g, ' ')
-			.replace(/&amp;/g, '&')
-			.replace(/&lt;/g, '<')
-			.replace(/&gt;/g, '>')
-			.replace(/&quot;/g, '"')
-			.replace(/&#39;/g, "'")
-			.replace(/&nbsp;/g, ' ')
+		decodeEntities(s.replace(/<[^>]+>/g, ' '))
 			.replace(/\s+/g, ' ')
 			.trim() || null
 	);
