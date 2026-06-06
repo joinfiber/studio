@@ -77,6 +77,7 @@
 	let adding = $state(false);
 	let savingEdit = $state(false);
 	let editLoading = $state(false);
+	let panelGen = 0; // bumped on every panel open/close; guards stale async results
 
 	// Google reference (display-only) + hours editor
 	let google = $state<GoogleDetails | null>(null);
@@ -176,8 +177,10 @@
 		osmRefLoading = false;
 		osmRefTried = false;
 		editMeta = null;
+		editLoading = false;
 	}
 	function openPanel(v: OsmVenue) {
+		panelGen++;
 		editing = null;
 		original = null;
 		selected = v;
@@ -192,6 +195,8 @@
 		resetPanelExtras();
 	}
 	async function openEditPanel(p: FullOrg) {
+		panelGen++;
+		const gen = panelGen;
 		selected = null;
 		resetPanelExtras();
 		editLoading = true;
@@ -219,6 +224,7 @@
 					};
 				};
 			};
+			if (gen !== panelGen) return; // panel changed during load — drop this result
 			if (!res.ok || !r.raw) {
 				toast.push(r.error ?? 'Couldn’t load venue.', 'error');
 				closePanel();
@@ -251,13 +257,16 @@
 				identifiers: Array.isArray(raw.location?.identifier) ? raw.location.identifier : [],
 			};
 		} catch (e) {
-			toast.push(e instanceof Error ? e.message : 'Couldn’t load venue.', 'error');
-			closePanel();
+			if (gen === panelGen) {
+				toast.push(e instanceof Error ? e.message : 'Couldn’t load venue.', 'error');
+				closePanel();
+			}
 		} finally {
-			editLoading = false;
+			if (gen === panelGen) editLoading = false;
 		}
 	}
 	function closePanel() {
+		panelGen++;
 		selected = null;
 		editing = null;
 		draft = null;
@@ -276,6 +285,7 @@
 
 	async function loadGoogle() {
 		if ((!selected && !editing) || googleLoading) return;
+		const gen = panelGen;
 		googleLoading = true;
 		try {
 			const res = await fetch('/map/google', {
@@ -284,27 +294,32 @@
 				body: JSON.stringify({ name: subjName, lat: subjLat, lng: subjLng }),
 			});
 			const r = (await res.json().catch(() => ({}))) as { details?: GoogleDetails | null; error?: string };
+			if (gen !== panelGen) return; // panel changed — don't land this in another venue
 			if (!res.ok) {
 				toast.push(String(r.error ?? 'Google lookup failed.'), 'error');
 			} else {
 				google = r.details ?? null;
 			}
 		} catch (e) {
-			toast.push(e instanceof Error ? e.message : 'Google lookup failed.', 'error');
+			if (gen === panelGen) toast.push(e instanceof Error ? e.message : 'Google lookup failed.', 'error');
 		} finally {
-			googleLoading = false;
-			googleTried = true;
+			if (gen === panelGen) {
+				googleLoading = false;
+				googleTried = true;
+			}
 		}
 	}
 
 	async function loadOsmMatch() {
 		if (!editing || osmRefLoading) return;
+		const gen = panelGen;
 		osmRefLoading = true;
 		try {
 			const { lat, lng, name } = editing;
 			const dd = 0.0025; // ~250 m box around the venue
 			const res = await fetch(`/map/osm?s=${lat - dd}&w=${lng - dd}&n=${lat + dd}&e=${lng + dd}`);
 			const r = (await res.json().catch(() => ({}))) as { venues?: OsmVenue[] };
+			if (gen !== panelGen) return; // panel changed — drop
 			const target = name.toLowerCase();
 			let best: OsmVenue | null = null;
 			let bestScore = Infinity;
@@ -320,10 +335,12 @@
 			osmRefMatch = best;
 			if (!best) toast.push('No OSM venue found nearby.', 'info', 2000);
 		} catch {
-			toast.push('OSM lookup failed.', 'error');
+			if (gen === panelGen) toast.push('OSM lookup failed.', 'error');
 		} finally {
-			osmRefLoading = false;
-			osmRefTried = true;
+			if (gen === panelGen) {
+				osmRefLoading = false;
+				osmRefTried = true;
+			}
 		}
 	}
 
@@ -383,7 +400,8 @@
 			website: d.website.trim() || undefined,
 			phone: d.phone.trim() || undefined,
 			sameAs: d.sameAs.split(',').map((s) => s.trim()).filter(Boolean),
-			category: d.tags.trim() || v.category,
+			tags: d.tags.split(',').map((s) => s.trim()).filter(Boolean),
+			category: v.category, // OSM category — a server-side tag fallback if tags is empty
 			openingHours: hasAnyHours(week) ? weekToSpec(week) : undefined,
 			osmType: v.osmType,
 			osmId: v.osmId,
@@ -431,10 +449,7 @@
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ orgId, reviewed }),
 		});
-		if (!res.ok) {
-			toast.push('Couldn’t update review state.', 'error');
-			return false;
-		}
+		if (!res.ok) return false; // caller surfaces the message
 		if (reviewed) reviewedIds.add(orgId);
 		else reviewedIds.delete(orgId);
 		patchOrgFeature(orgId, { reviewed });
@@ -475,8 +490,12 @@
 				}
 				if (patch.name) patchOrgFeature(e.id, { name: String(patch.name) });
 			}
-			await markReviewed(e.id, true);
-			toast.push(edited ? 'Saved & marked reviewed' : 'Marked reviewed', 'success');
+			const reviewed = await markReviewed(e.id, true);
+			if (reviewed) {
+				toast.push(edited ? 'Saved & marked reviewed' : 'Marked reviewed', 'success');
+			} else {
+				toast.push(edited ? 'Saved, but couldn’t mark reviewed' : 'Couldn’t mark reviewed', 'error');
+			}
 			closePanel();
 		} catch (err) {
 			toast.push(err instanceof Error ? err.message : 'Save failed.', 'error');
@@ -485,7 +504,9 @@
 		}
 	}
 	async function unreview() {
-		if (editing) await markReviewed(editing.id, false);
+		if (!editing) return;
+		const ok = await markReviewed(editing.id, false);
+		if (!ok) toast.push('Couldn’t update review state.', 'error');
 	}
 
 	function applyFilter(f: Filter) {
@@ -719,6 +740,7 @@
 
 				{#if editLoading}<div class="panel-loading">Loading venue…</div>{/if}
 
+				{#if !editLoading}
 				{#if osmRef}
 					{@const s = osmRef}
 					<div class="ref">
@@ -892,6 +914,7 @@
 						<button class="primary" onclick={addSelected} disabled={adding}>{adding ? 'Adding…' : 'Add to Commons'}</button>
 					</div>
 					<p class="panel-note">Adds as <strong>proxied</strong> — relayed from OSM. Google data is shown for reference only and is never stored.</p>
+				{/if}
 				{/if}
 			</aside>
 		{/if}

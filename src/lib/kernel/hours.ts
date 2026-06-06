@@ -173,6 +173,13 @@ function pointTime(p?: GooglePeriodPoint): string | null {
 }
 
 export function weekFromGooglePeriods(periods: GooglePeriod[]): WeekHours {
+	// Google encodes a 24/7 venue as a single period opening Sunday 00:00 with no
+	// close — expand it to all seven days (otherwise only Sunday would fill).
+	const only = periods.length === 1 ? periods[0] : null;
+	if (only && only.open?.day === 0 && (only.open?.hour ?? 0) === 0 && !only.close) {
+		return DAYS.map(() => ({ closed: false, open: '00:00', close: '24:00' }));
+	}
+
 	const week = DAYS.map(() => ({ closed: true, open: '', close: '' }));
 	for (const period of periods) {
 		const od = period.open?.day;

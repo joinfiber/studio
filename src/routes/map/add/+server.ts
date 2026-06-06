@@ -13,7 +13,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'Commons isn’t configured on this instance.' }, { status: 400 });
 	}
 
-	let body: { venue?: Partial<VenueCandidate> & { openingHours?: unknown[] } };
+	let body: { venue?: Partial<VenueCandidate> & { openingHours?: unknown[]; tags?: string[] } };
 	try {
 		body = await request.json();
 	} catch {
@@ -32,7 +32,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		website: v.website,
 		phone: v.phone,
 		sameAs: v.sameAs,
-		tags: v.category ? [v.category] : undefined,
+		tags: Array.isArray(v.tags) && v.tags.length ? v.tags : v.category ? [v.category] : undefined,
 		openingHours: v.openingHours,
 		osmType: v.osmType,
 		osmId: v.osmId,

@@ -76,6 +76,11 @@ describe('weekFromGooglePeriods', () => {
 		expect(w[1]).toEqual(closed); // Tuesday untouched
 	});
 
+	it('expands Google 24/7 (single Sunday-00:00 no-close period) to all seven days', () => {
+		const w = weekFromGooglePeriods([{ open: { day: 0, hour: 0, minute: 0 } }]);
+		expect(w.every((d) => !d.closed && d.open === '00:00' && d.close === '24:00')).toBe(true);
+	});
+
 	it('treats a missing close as open-24h and preserves a cross-midnight close', () => {
 		const open24 = weekFromGooglePeriods([{ open: { day: 1, hour: 0, minute: 0 } }]);
 		expect(open24[0]).toEqual(open('00:00', '24:00'));
