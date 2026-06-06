@@ -1,5 +1,7 @@
 # Studio
 
+[![CI](https://github.com/joinfiber/studio/actions/workflows/ci.yml/badge.svg)](https://github.com/joinfiber/studio/actions/workflows/ci.yml)
+
 Open-source GUI on top of the [Neighborhood Commons](https://neighborhood-commons.org).
 
 Studio is the operator-facing tool for cataloging neighborhood public facts — venues, events, programs, civic data. It's the third iteration of the tool, built clean against the stable Commons 3.x contract and a tidy kernel/tools seam.
