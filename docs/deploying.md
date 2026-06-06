@@ -27,7 +27,7 @@ The contributor slug is the lowercase-with-hyphens identifier shown in your [Com
 Optional:
 
 ```bash
-DATABASE_URL=file:./studio.db  # local SQLite path; defaults to in-memory
+STUDIO_DATABASE_URL=file:/data/studio.db  # local SQLite path; defaults to in-memory
 ```
 
 ## Local development
@@ -52,7 +52,7 @@ The build is a standard Node.js server (adapter-node). Deploy to Railway, Render
 
 Studio uses local SQLite (via libsql) for staging candidates that haven't been published yet. The database is *local to your deployment* — it doesn't sync anywhere. Commons is the source of truth for published facts.
 
-For deployment platforms with ephemeral disks, attach a persistent volume to your `DATABASE_URL` path or accept that pending candidates are lost on restart.
+For deployment platforms with ephemeral disks, attach a persistent volume and point `STUDIO_DATABASE_URL` at it (e.g. `file:/data/studio.db` with a volume mounted at `/data`) — otherwise pending candidates and your map review progress are lost on restart. Note it's `STUDIO_DATABASE_URL`, **not** `DATABASE_URL` (the latter is Railway's reserved Postgres variable, which a libsql client can't open).
 
 ## Access gate (REQUIRED for public deployments)
 
@@ -64,7 +64,8 @@ SESSION_SECRET=<optional; signs the session cookie, falls back to the password>
 ```
 
 - With `STUDIO_PASSWORD` set: every route requires a valid session. Users hit a login page; a correct password issues a signed, 7-day, HTTP-only cookie.
-- Without it: the gate is off (fine on localhost). The server logs a loud warning at startup so a misconfigured public deploy is obvious.
+- Without it on **localhost**: the gate is off (local-dev convenience), with a loud startup warning.
+- Without it on a **non-local host**: Studio **fails closed** — every route returns 503 — so a public deploy that forgot the password serves nothing rather than an open admin surface. Set `STUDIO_ALLOW_OPEN=true` only if you intentionally want an open instance (e.g. behind your own network auth).
 
 The gate is single-password by design — Studio is a single-operator tool. Sign out via the header link.
 
