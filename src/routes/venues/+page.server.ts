@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import type { Organization, components } from 'neighborhood-commons';
-import { mapOrganization, type LiveOrg } from '$lib/instance/organizations.js';
+import { mapOrganization, pickOrgPatch, type LiveOrg } from '$lib/instance/organizations.js';
 
 type OrgInput = components['schemas']['OrganizationInput'];
 
@@ -85,11 +85,12 @@ export const actions: Actions = {
 		} catch {
 			return fail(400, { error: 'Could not read the changes.' });
 		}
-		if (Object.keys(patch).length === 0) return { ok: true, id, noop: true as const };
+		const body = pickOrgPatch(patch as Record<string, unknown>);
+		if (Object.keys(body).length === 0) return { ok: true, id, noop: true as const };
 
 		const result = await commons.sdk.PATCH('/service/organizations/{id}', {
 			params: { path: { id } },
-			body: patch as OrgInput,
+			body: body as OrgInput,
 		});
 
 		if (result.error) {

@@ -84,3 +84,29 @@ export function methodLabel(method: string): string {
 			return method;
 	}
 }
+
+/** Fields an operator may edit on an organization. `method` and identity are
+ *  excluded — the Commons sets those. */
+const EDITABLE_ORG_FIELDS = [
+	'name',
+	'url',
+	'telephone',
+	'email',
+	'description',
+	'logo',
+	'sameAs',
+	'tags',
+	'commercial',
+	'openingHoursSpecification',
+] as const;
+
+/**
+ * Allowlist a client-supplied org update to the editable fields — so neither
+ * write path forwards an arbitrary object to the privileged PATCH. Shared by the
+ * Venues tab and the map edit panel.
+ */
+export function pickOrgPatch(patch: Record<string, unknown>): Record<string, unknown> {
+	const out: Record<string, unknown> = {};
+	for (const k of EDITABLE_ORG_FIELDS) if (k in patch) out[k] = patch[k];
+	return out;
+}

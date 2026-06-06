@@ -34,6 +34,9 @@ export interface VenueInput {
 	 *  is available (ecosystem convention: `osm:type/id`). */
 	osmType?: string;
 	osmId?: number;
+	/** Skip the per-venue Google place_id lookup (the bulk importer sets this to
+	 *  avoid one Google call per venue — it falls back to the OSM ref instead). */
+	skipGoogleLookup?: boolean;
 }
 
 export async function createVenue(
@@ -65,7 +68,7 @@ export async function createVenue(
 
 	// Stable identity (best-effort): the place_id is the only Google field we store.
 	let googlePlaceId: string | undefined;
-	if (googlePlacesConfigured()) {
+	if (googlePlacesConfigured() && !v.skipGoogleLookup) {
 		const q =
 			[v.name, v.address?.streetAddress, v.address?.addressLocality].filter(Boolean).join(', ') ||
 			v.name;

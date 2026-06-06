@@ -1,12 +1,12 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import type { Client } from 'openapi-fetch';
-import type { paths, components } from 'neighborhood-commons';
+import type { paths } from 'neighborhood-commons';
 import { geocodeArea } from '$lib/kernel/geocode.js';
 import { queryVenues, CATEGORY_GROUPS, type VenueCandidate } from '$lib/tools/venues/overpass.js';
+import { createVenue } from '$lib/kernel/venues.js';
 
 type Sdk = Client<paths>;
-type OrgInput = components['schemas']['OrganizationInput'];
 
 const PUBLISH_CAP = 150; // hard bound on one publish run
 
@@ -16,38 +16,28 @@ export const load: PageServerLoad = ({ locals }) => ({
 	defaultGroups: ['music_nightlife', 'arts_culture', 'food_drink', 'community'],
 });
 
+// One create path for every venue (shared with the map's click-to-add): bounds,
+// the osm:type/id external id, and method='proxied'. Bulk imports skip the
+// per-venue Google lookup to avoid one billable call per venue.
 async function createVenueOrg(
 	sdk: Sdk,
 	v: VenueCandidate,
 ): Promise<{ ok: boolean; error?: string }> {
-	const place = await sdk.POST('/service/places', {
-		body: { name: v.name, geo: { latitude: v.lat, longitude: v.lng }, address: v.address },
-	});
-	if (!place.data) {
-		return { ok: false, error: place.error?.error?.message ?? `place ${place.response.status}` };
-	}
-	// `proxied` — these venues are relayed from OpenStreetMap, a public source.
-	// (Carried on an intersection since the SDK's OrganizationInput type lacks
-	// `method` until the regen ships; the value is sent at runtime regardless.)
-	const orgBody: OrgInput & { method?: string } = {
+	const r = await createVenue(sdk, {
 		name: v.name,
-		url: v.website || undefined,
-		telephone: v.phone || undefined,
-		sameAs: v.sameAs?.length ? v.sameAs : undefined,
+		lat: v.lat,
+		lng: v.lng,
+		address: v.address,
+		website: v.website,
+		phone: v.phone,
+		sameAs: v.sameAs,
 		tags: v.category ? [v.category] : undefined,
-		primaryPlaceId: place.data.place.id,
+		osmType: v.osmType,
+		osmId: v.osmId,
 		method: 'proxied',
-	};
-	const org = await sdk.POST('/service/organizations', { body: orgBody });
-	if (!org.data) {
-		const status = org.response.status;
-		// Slug collision = this org name already exists; treat as a soft skip.
-		return {
-			ok: false,
-			error: status === 409 ? 'already exists' : (org.error?.error?.message ?? `org ${status}`),
-		};
-	}
-	return { ok: true };
+		skipGoogleLookup: true,
+	});
+	return r.error ? { ok: false, error: r.error } : { ok: true };
 }
 
 async function publishVenues(sdk: Sdk, venues: VenueCandidate[]) {

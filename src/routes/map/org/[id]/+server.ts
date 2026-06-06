@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import type { components } from 'neighborhood-commons';
-import { mapOrganization } from '$lib/instance/organizations.js';
+import { mapOrganization, pickOrgPatch } from '$lib/instance/organizations.js';
 
 type OrgInput = components['schemas']['OrganizationInput'];
 
@@ -39,22 +39,9 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	if (!patch || Object.keys(patch).length === 0) {
 		return json({ error: 'No changes.' }, { status: 400 });
 	}
-	// Allowlist the fields a caller may set — don't forward an arbitrary object
-	// to the privileged write.
-	const ALLOWED = [
-		'name',
-		'url',
-		'telephone',
-		'email',
-		'description',
-		'logo',
-		'sameAs',
-		'tags',
-		'commercial',
-		'openingHoursSpecification',
-	];
-	const body: Record<string, unknown> = {};
-	for (const k of ALLOWED) if (k in patch) body[k] = (patch as Record<string, unknown>)[k];
+	// Allowlist the editable fields — don't forward an arbitrary object to the
+	// privileged write. Shared with the Venues tab.
+	const body = pickOrgPatch(patch as Record<string, unknown>);
 	if (Object.keys(body).length === 0) {
 		return json({ error: 'No editable fields in the update.' }, { status: 400 });
 	}
