@@ -17,8 +17,12 @@
  *
  * Gate behavior:
  * - STUDIO_PASSWORD set   → gate ON. All routes require a 'full' session.
- * - STUDIO_PASSWORD unset → gate OFF (local-dev convenience on localhost),
- *   with a loud one-time warning so a misconfigured public deploy is obvious.
+ * - STUDIO_PASSWORD unset, request to localhost → gate OFF (local-dev
+ *   convenience), with a loud one-time warning.
+ * - STUDIO_PASSWORD unset, request to a non-local host → FAIL CLOSED (the hook
+ *   returns 503 for every route), so a public deploy that forgot the password
+ *   serves nothing instead of an open admin surface. An operator who genuinely
+ *   wants an open instance opts in with STUDIO_ALLOW_OPEN=true.
  */
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
@@ -99,4 +103,15 @@ export function verifyToken(
 
 	if (requiredLevel === 'full') return level === 'full';
 	return level === 'password' || level === 'full';
+}
+
+/**
+ * Loopback host → local dev. The only context where the gate may be off without
+ * a password (besides an explicit STUDIO_ALLOW_OPEN opt-in). A forged Host of
+ * "localhost" against a public deploy is the residual edge; the practical footgun
+ * this guards is deploying to a real domain without setting STUDIO_PASSWORD.
+ */
+export function isLoopback(hostname: string): boolean {
+	const h = hostname.toLowerCase().replace(/^\[|\]$/g, ''); // strip IPv6 brackets
+	return h === 'localhost' || h === '127.0.0.1' || h === '::1' || h.endsWith('.localhost');
 }

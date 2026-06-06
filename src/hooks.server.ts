@@ -14,12 +14,18 @@
 
 import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 import { createCommonsClient, type CommonsClient } from '$lib/kernel/commons-client';
 import { isAdminInstance } from '$lib/kernel/auth';
-import { gateEnabled, verifyToken, COOKIE_NAME } from '$lib/kernel/session';
+import { gateEnabled, verifyToken, isLoopback, COOKIE_NAME } from '$lib/kernel/session';
 
 let commonsClient: CommonsClient | null = null;
 let isAdminFlag: boolean | null = null;
+
+const UNCONFIGURED =
+	'Studio is not configured for public access. Set STUDIO_PASSWORD to enable the access ' +
+	'gate (or STUDIO_ALLOW_OPEN=true to intentionally run open). Refusing to serve an open ' +
+	'admin surface on a public host.';
 
 export const handle: Handle = async ({ event, resolve }) => {
 	if (commonsClient === null) commonsClient = createCommonsClient();
@@ -30,18 +36,27 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const path = event.url.pathname;
 	const isAsset = path.startsWith('/_app/') || path.startsWith('/favicon');
 
-	if (gateEnabled() && !isAsset) {
-		const authed = verifyToken(event.cookies.get(COOKIE_NAME));
-		event.locals.authed = authed;
-		if (!authed && path !== '/login') {
-			throw redirect(303, '/login');
-		}
-		if (authed && path === '/login') {
-			throw redirect(303, '/');
+	if (gateEnabled()) {
+		if (!isAsset) {
+			const authed = verifyToken(event.cookies.get(COOKIE_NAME));
+			event.locals.authed = authed;
+			if (!authed && path !== '/login') {
+				throw redirect(303, '/login');
+			}
+			if (authed && path === '/login') {
+				throw redirect(303, '/');
+			}
+		} else {
+			event.locals.authed = false; // asset under gate; value unused
 		}
 	} else {
-		// Gate off (local dev) — treat as authed so UI doesn't show a stale
-		// "sign out" affordance.
+		// No password configured. Open only for local dev (loopback host) or an
+		// explicit opt-in; otherwise fail CLOSED rather than serve an open
+		// privileged surface to the internet.
+		const openOk = isLoopback(event.url.hostname) || env.STUDIO_ALLOW_OPEN === 'true';
+		if (!openOk && !isAsset) {
+			return new Response(UNCONFIGURED, { status: 503, headers: { 'content-type': 'text/plain' } });
+		}
 		event.locals.authed = true;
 	}
 
