@@ -239,7 +239,7 @@
 		color: #3730a3;
 	}
 	.ok {
-		color: #166534;
+		color: var(--accent);
 	}
 	.warn,
 	.muted {
@@ -387,7 +387,7 @@
 		border-radius: 3px;
 	}
 	a {
-		color: #166534;
+		color: var(--accent);
 		text-decoration: underline;
 	}
 </style>

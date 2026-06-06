@@ -5,7 +5,6 @@
 	import { page } from '$app/state';
 	import type { PageData } from './$types';
 	import { methodLabel, type LiveOrg } from '$lib/instance/organizations.js';
-	import Toast from '$lib/kernel/chrome/Toast.svelte';
 	import { toast } from '$lib/kernel/chrome/toast.svelte.js';
 
 	let { data }: { data: PageData } = $props();
@@ -365,8 +364,6 @@
 	{/if}
 {/if}
 
-<Toast />
-
 <style>
 	.page-head {
 		display: flex;
@@ -405,7 +402,7 @@
 		outline: none;
 	}
 	.toolbar .search input:focus {
-		border-color: #166534;
+		border-color: var(--accent);
 		box-shadow: 0 0 0 2px rgba(22, 101, 52, 0.15);
 	}
 	.toolbar select {
@@ -434,7 +431,7 @@
 		cursor: pointer;
 	}
 	.toggle button.active {
-		background: #166534;
+		background: var(--accent);
 		color: #fff;
 	}
 	.check {
@@ -607,7 +604,7 @@
 		color: #888;
 	}
 	a {
-		color: #166534;
+		color: var(--accent);
 		word-break: break-all;
 	}
 	code {
@@ -629,8 +626,8 @@
 		cursor: pointer;
 	}
 	.edit-btn:hover {
-		border-color: #166534;
-		color: #166534;
+		border-color: var(--accent);
+		color: var(--accent);
 	}
 	.edit {
 		display: flex;
@@ -671,7 +668,7 @@
 	.field input:focus,
 	.field select:focus,
 	.field textarea:focus {
-		border-color: #166534;
+		border-color: var(--accent);
 		box-shadow: 0 0 0 2px rgba(22, 101, 52, 0.12);
 	}
 	.grid {
@@ -690,8 +687,8 @@
 		gap: 0.5rem;
 	}
 	button.primary {
-		background: #166534;
-		border: 1px solid #166534;
+		background: var(--accent);
+		border: 1px solid var(--accent);
 		color: #fff;
 		font-family: inherit;
 		font-size: 0.875rem;
@@ -700,7 +697,7 @@
 		cursor: pointer;
 	}
 	button.primary:hover:not(:disabled) {
-		background: #14532d;
+		background: var(--accent-strong);
 	}
 	button.primary:disabled {
 		opacity: 0.6;
@@ -717,7 +714,7 @@
 		cursor: pointer;
 	}
 	button.ghost:hover {
-		border-color: #166534;
-		color: #166534;
+		border-color: var(--accent);
+		color: var(--accent);
 	}
 </style>

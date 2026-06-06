@@ -56,7 +56,7 @@
 			transform 100ms ease;
 	}
 	.guide:hover {
-		border-color: #166534;
+		border-color: var(--accent);
 		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 		transform: translateY(-1px);
 	}

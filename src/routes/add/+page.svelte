@@ -2,7 +2,6 @@
 	import { enhance } from '$app/forms';
 	import { toast } from '$lib/kernel/chrome/toast.svelte.js';
 	import { CATEGORIES } from '$lib/kernel/categories.js';
-	import Toast from '$lib/kernel/chrome/Toast.svelte';
 	import Term from '$lib/kernel/chrome/Term.svelte';
 	import type { PageData } from './$types';
 
@@ -411,8 +410,6 @@
 	</form>
 {/if}
 
-<Toast />
-
 <style>
 	.page-head {
 		display: flex;
@@ -499,7 +496,7 @@
 	input:focus,
 	select:focus,
 	textarea:focus {
-		border-color: #166534;
+		border-color: var(--accent);
 		box-shadow: 0 0 0 2px rgba(22, 101, 52, 0.15);
 	}
 	.row {
@@ -581,8 +578,8 @@
 		margin-top: 0.5rem;
 	}
 	button.primary {
-		background: #166534;
-		border: 1px solid #166534;
+		background: var(--accent);
+		border: 1px solid var(--accent);
 		color: #fff;
 		font-family: inherit;
 		font-size: 0.9rem;
@@ -592,7 +589,7 @@
 		transition: background-color 100ms ease;
 	}
 	button.primary:hover:not(:disabled) {
-		background: #14532d;
+		background: var(--accent-strong);
 	}
 	button.primary:disabled {
 		opacity: 0.6;

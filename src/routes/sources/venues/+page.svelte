@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import type { PageData } from './$types';
-	import Toast from '$lib/kernel/chrome/Toast.svelte';
 	import { toast } from '$lib/kernel/chrome/toast.svelte.js';
 	import Term from '$lib/kernel/chrome/Term.svelte';
 
@@ -189,8 +188,6 @@
 	{/if}
 {/if}
 
-<Toast />
-
 <style>
 	.breadcrumb {
 		margin-bottom: 0.5rem;
@@ -234,7 +231,7 @@
 		outline: none;
 	}
 	.find-form input[type='text']:focus {
-		border-color: #166534;
+		border-color: var(--accent);
 		box-shadow: 0 0 0 2px rgba(22, 101, 52, 0.15);
 	}
 	.cats {
@@ -279,7 +276,7 @@
 	.link {
 		background: none;
 		border: none;
-		color: #166534;
+		color: var(--accent);
 		font-family: inherit;
 		font-size: 0.82rem;
 		cursor: pointer;
@@ -359,7 +356,7 @@
 	}
 	.link-flag {
 		font-size: 0.7rem;
-		color: #166534;
+		color: var(--accent);
 		text-transform: uppercase;
 		letter-spacing: 0.03em;
 	}
@@ -380,8 +377,8 @@
 		color: #666;
 	}
 	button.primary {
-		background: #166534;
-		border: 1px solid #166534;
+		background: var(--accent);
+		border: 1px solid var(--accent);
 		color: #fff;
 		font-family: inherit;
 		font-size: 0.875rem;
@@ -392,7 +389,7 @@
 		white-space: nowrap;
 	}
 	button.primary:hover:not(:disabled) {
-		background: #14532d;
+		background: var(--accent-strong);
 	}
 	button.primary:disabled {
 		opacity: 0.6;

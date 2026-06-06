@@ -6,7 +6,6 @@
 	import type { PageData } from './$types';
 	import type { LiveEvent } from '$lib/instance/library.js';
 	import { CATEGORIES } from '$lib/kernel/categories.js';
-	import Toast from '$lib/kernel/chrome/Toast.svelte';
 	import { toast } from '$lib/kernel/chrome/toast.svelte.js';
 
 	let { data }: { data: PageData } = $props();
@@ -364,8 +363,6 @@
 	{/if}
 {/if}
 
-<Toast />
-
 <style>
 	.page-head {
 		display: flex;
@@ -404,7 +401,7 @@
 		outline: none;
 	}
 	.toolbar .search input:focus {
-		border-color: #166534;
+		border-color: var(--accent);
 		box-shadow: 0 0 0 2px rgba(22, 101, 52, 0.15);
 	}
 	.toolbar select {
@@ -511,7 +508,7 @@
 	}
 	.status-published {
 		background: #dcfce7;
-		color: #166534;
+		color: var(--accent);
 	}
 	.status-pending_review {
 		background: #fef3c7;
@@ -582,8 +579,8 @@
 	}
 	.inline:focus {
 		background: #fff;
-		border-bottom-color: #166534;
-		box-shadow: 0 1px 0 0 #166534;
+		border-bottom-color: var(--accent);
+		box-shadow: 0 1px 0 0 var(--accent);
 	}
 	.cat,
 	.status-sel {
@@ -627,7 +624,7 @@
 	}
 	.src {
 		margin-left: auto;
-		color: #166534;
+		color: var(--accent);
 		font-size: 0.8rem;
 		text-decoration: none;
 	}
@@ -653,8 +650,8 @@
 		color: #555;
 	}
 	button.primary {
-		background: #166534;
-		border: 1px solid #166534;
+		background: var(--accent);
+		border: 1px solid var(--accent);
 		color: #fff;
 		font-family: inherit;
 		font-size: 0.875rem;
@@ -664,7 +661,7 @@
 		transition: background-color 100ms ease;
 	}
 	button.primary:hover:not(:disabled) {
-		background: #14532d;
+		background: var(--accent-strong);
 	}
 	button.primary:disabled {
 		opacity: 0.6;
@@ -696,7 +693,7 @@
 		color: #888;
 	}
 	a {
-		color: #166534;
+		color: var(--accent);
 	}
 	code {
 		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;

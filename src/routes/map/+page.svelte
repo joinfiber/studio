@@ -5,7 +5,6 @@
 	import type { Map as MlMap, MapOptions, GeoJSONSource, FilterSpecification } from 'maplibre-gl';
 	import type { PageData } from './$types';
 	import CapabilityGuide from '$lib/kernel/chrome/CapabilityGuide.svelte';
-	import Toast from '$lib/kernel/chrome/Toast.svelte';
 	import { toast } from '$lib/kernel/chrome/toast.svelte.js';
 	import {
 		emptyWeek,
@@ -1110,8 +1109,6 @@
 	</p>
 {/if}
 
-<Toast />
-
 <style>
 	.page-head {
 		display: flex;
@@ -1186,7 +1183,7 @@
 		border-left: none;
 	}
 	.seg button.active {
-		background: #166534;
+		background: var(--accent);
 		color: #fff;
 	}
 	.rev-count {
@@ -1343,7 +1340,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		color: #166534;
+		color: var(--accent);
 	}
 	span.ref-val {
 		color: #444;
@@ -1362,14 +1359,14 @@
 		cursor: pointer;
 	}
 	.copy:hover {
-		border-color: #166534;
-		color: #166534;
+		border-color: var(--accent);
+		color: var(--accent);
 	}
 	.gsearch {
 		display: inline-block;
 		margin-top: 0.4rem;
 		font-size: 0.78rem;
-		color: #166534;
+		color: var(--accent);
 	}
 	.form {
 		display: flex;
@@ -1408,7 +1405,7 @@
 	}
 	.f input:focus,
 	.f textarea:focus {
-		border-color: #166534;
+		border-color: var(--accent);
 		box-shadow: 0 0 0 2px rgba(22, 101, 52, 0.12);
 	}
 	.panel-actions {
@@ -1416,8 +1413,8 @@
 	}
 	.primary {
 		flex: 1;
-		background: #166534;
-		border: 1px solid #166534;
+		background: var(--accent);
+		border: 1px solid var(--accent);
 		color: #fff;
 		font-family: inherit;
 		font-size: 0.9rem;
@@ -1426,7 +1423,7 @@
 		cursor: pointer;
 	}
 	.primary:hover:not(:disabled) {
-		background: #14532d;
+		background: var(--accent-strong);
 	}
 	.primary:disabled {
 		opacity: 0.6;
@@ -1554,8 +1551,8 @@
 		white-space: nowrap;
 	}
 	.mini:hover {
-		border-color: #166534;
-		color: #166534;
+		border-color: var(--accent);
+		color: var(--accent);
 	}
 	.hours-grid {
 		display: flex;
@@ -1593,7 +1590,7 @@
 	}
 	.htime:focus {
 		outline: none;
-		border-color: #166534;
+		border-color: var(--accent);
 	}
 	.hdash {
 		color: #bbb;

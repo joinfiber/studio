@@ -164,7 +164,7 @@
 		max-width: 200px;
 	}
 	.verify input:focus {
-		border-color: #166534;
+		border-color: var(--accent);
 		box-shadow: 0 0 0 2px rgba(22, 101, 52, 0.15);
 	}
 	.error {
@@ -177,7 +177,7 @@
 		margin: 0 0 0.5rem;
 	}
 	.status.active {
-		color: #166534;
+		color: var(--accent);
 	}
 	.status.inactive {
 		color: #92400e;
@@ -188,8 +188,8 @@
 	.primary,
 	.btn {
 		display: inline-block;
-		background: #166534;
-		border: 1px solid #166534;
+		background: var(--accent);
+		border: 1px solid var(--accent);
 		color: #fff;
 		font-family: inherit;
 		font-size: 0.9rem;
@@ -201,7 +201,7 @@
 	}
 	.primary:hover,
 	.btn:hover {
-		background: #14532d;
+		background: var(--accent-strong);
 	}
 	.cancel {
 		margin-top: 0.75rem;

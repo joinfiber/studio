@@ -88,7 +88,7 @@
 			box-shadow 100ms ease;
 	}
 	input:focus {
-		border-color: #166534;
+		border-color: var(--accent);
 		box-shadow: 0 0 0 2px rgba(22, 101, 52, 0.15);
 	}
 	input[name='code'] {
@@ -103,8 +103,8 @@
 		color: #991b1b;
 	}
 	.primary {
-		background: #166534;
-		border: 1px solid #166534;
+		background: var(--accent);
+		border: 1px solid var(--accent);
 		color: #fff;
 		font-family: inherit;
 		font-size: 0.9rem;
@@ -114,6 +114,6 @@
 		transition: background-color 100ms ease;
 	}
 	.primary:hover {
-		background: #14532d;
+		background: var(--accent-strong);
 	}
 </style>

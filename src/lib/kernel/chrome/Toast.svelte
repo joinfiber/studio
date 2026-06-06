@@ -40,7 +40,7 @@
 		pointer-events: auto;
 	}
 	.toast.success {
-		background: #166534;
+		background: var(--accent);
 	}
 	.toast.error {
 		background: #991b1b;

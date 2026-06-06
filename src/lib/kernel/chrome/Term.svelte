@@ -107,7 +107,7 @@
 		color: #333;
 	}
 	.pop-doc {
-		color: #166534;
+		color: var(--accent);
 		text-decoration: none;
 		font-size: 0.75rem;
 	}

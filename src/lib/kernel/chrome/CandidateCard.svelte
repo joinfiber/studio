@@ -136,8 +136,8 @@
 	textarea:focus,
 	select:focus {
 		background: #fff;
-		border-bottom-color: #166534;
-		box-shadow: 0 1px 0 0 #166534;
+		border-bottom-color: var(--accent);
+		box-shadow: 0 1px 0 0 var(--accent);
 	}
 
 	.title {

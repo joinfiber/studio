@@ -2,6 +2,8 @@
 	import type { Snippet } from 'svelte';
 	import type { LayoutData } from './$types';
 	import { page } from '$app/state';
+	import Toast from '$lib/kernel/chrome/Toast.svelte';
+	import '../app.css';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
@@ -59,6 +61,8 @@
 		{@render children()}
 	</main>
 </div>
+
+<Toast />
 
 <style>
 	:global(body) {
@@ -163,8 +167,8 @@
 		color: #444;
 	}
 	:global(.ghost-btn:hover:not(:disabled)) {
-		border-color: #166534;
-		color: #166534;
+		border-color: var(--accent);
+		color: var(--accent);
 	}
 	:global(.ghost-btn:disabled) {
 		opacity: 0.6;

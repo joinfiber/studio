@@ -118,7 +118,7 @@
 			transform 100ms ease;
 	}
 	.method:hover {
-		border-color: #166534;
+		border-color: var(--accent);
 		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 		transform: translateY(-1px);
 	}
@@ -131,7 +131,7 @@
 		background: #fcfcfc;
 	}
 	.method.create:hover {
-		border-color: #166534;
+		border-color: var(--accent);
 		background: #fff;
 	}
 	.plus {
@@ -141,7 +141,7 @@
 		width: 1.15rem;
 		height: 1.15rem;
 		border-radius: 4px;
-		background: #166534;
+		background: var(--accent);
 		color: #fff;
 		font-weight: 600;
 		font-size: 0.9rem;

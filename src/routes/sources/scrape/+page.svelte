@@ -4,7 +4,6 @@
 	import type { EventCandidate } from '$lib/kernel/candidate.js';
 	import CandidateCard from '$lib/kernel/chrome/CandidateCard.svelte';
 	import CapabilityGuide from '$lib/kernel/chrome/CapabilityGuide.svelte';
-	import Toast from '$lib/kernel/chrome/Toast.svelte';
 	import { toast } from '$lib/kernel/chrome/toast.svelte.js';
 	import { saveToQueue } from '$lib/kernel/queue-client.js';
 	import Term from '$lib/kernel/chrome/Term.svelte';
@@ -151,8 +150,6 @@
 	{/if}
 {/if}
 
-<Toast />
-
 <style>
 	.breadcrumb {
 		margin-bottom: 0.5rem;
@@ -223,7 +220,7 @@
 		outline: none;
 	}
 	.scrape-form input:focus {
-		border-color: #166534;
+		border-color: var(--accent);
 		box-shadow: 0 0 0 2px rgba(22, 101, 52, 0.15);
 	}
 	.publish-bar {
@@ -247,7 +244,7 @@
 		outline: none;
 	}
 	.publish-bar input[type='text']:focus {
-		border-color: #166534;
+		border-color: var(--accent);
 		box-shadow: 0 0 0 2px rgba(22, 101, 52, 0.15);
 	}
 	.publish-bar .count {
@@ -289,8 +286,8 @@
 		border-color: #991b1b;
 	}
 	button.primary {
-		background: #166534;
-		border: 1px solid #166534;
+		background: var(--accent);
+		border: 1px solid var(--accent);
 		color: #fff;
 		font-family: inherit;
 		font-size: 0.875rem;
@@ -301,7 +298,7 @@
 		white-space: nowrap;
 	}
 	button.primary:hover:not(:disabled) {
-		background: #14532d;
+		background: var(--accent-strong);
 	}
 	button.primary:disabled {
 		opacity: 0.6;

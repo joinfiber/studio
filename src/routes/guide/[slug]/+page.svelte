@@ -61,7 +61,7 @@
 		margin: 0.2rem 0;
 	}
 	.doc :global(a) {
-		color: #166534;
+		color: var(--accent);
 	}
 	.doc :global(code) {
 		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;

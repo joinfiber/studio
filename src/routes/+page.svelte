@@ -7,7 +7,6 @@
 	import type { EventCandidate } from '$lib/kernel/candidate.js';
 	import CapabilityGuide from '$lib/kernel/chrome/CapabilityGuide.svelte';
 	import CandidateCard from '$lib/kernel/chrome/CandidateCard.svelte';
-	import Toast from '$lib/kernel/chrome/Toast.svelte';
 	import { toast } from '$lib/kernel/chrome/toast.svelte.js';
 
 	let { data }: { data: PageData } = $props();
@@ -294,8 +293,6 @@
 	{/if}
 {/if}
 
-<Toast />
-
 <style>
 	.tabs {
 		display: flex;
@@ -323,11 +320,11 @@
 	.tabs button.active {
 		color: #222;
 		font-weight: 600;
-		border-bottom-color: #166534;
+		border-bottom-color: var(--accent);
 	}
 	.badge {
 		font-size: 0.7rem;
-		background: #166534;
+		background: var(--accent);
 		color: #fff;
 		padding: 0.05rem 0.4rem;
 		border-radius: 999px;
@@ -463,12 +460,12 @@
 		text-decoration: none;
 	}
 	button.primary {
-		background: #166534;
-		border-color: #166534;
+		background: var(--accent);
+		border-color: var(--accent);
 		color: #fff;
 	}
 	button.primary:hover {
-		background: #14532d;
+		background: var(--accent-strong);
 	}
 	button.danger {
 		background: #991b1b;
@@ -485,7 +482,7 @@
 	}
 	.external {
 		margin-left: auto;
-		color: #166534;
+		color: var(--accent);
 		border-color: transparent;
 	}
 	.ingested {
@@ -501,7 +498,7 @@
 		margin-bottom: 1.25rem;
 	}
 	.ingested a {
-		color: #166534;
+		color: var(--accent);
 	}
 	.gate-note {
 		max-width: 800px;
@@ -545,7 +542,7 @@
 		margin-top: 0.2rem;
 	}
 	.org {
-		color: #166534;
+		color: var(--accent);
 	}
 	.org.missing {
 		color: #b45309;

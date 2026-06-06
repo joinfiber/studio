@@ -1,0 +1,6 @@
+/* Global tokens. Studio's accent (a deep green) lives here so the brand color
+   is a single source of truth — change it once, everywhere follows. */
+:root {
+	--accent: #166534;
+	--accent-strong: #14532d;
+}

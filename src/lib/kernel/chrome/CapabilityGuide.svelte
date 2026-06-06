@@ -64,7 +64,7 @@
 	}
 	.pill.ok {
 		background: #dcfce7;
-		color: #166534;
+		color: var(--accent);
 	}
 	.pill.todo {
 		background: #fef3c7;
@@ -97,7 +97,7 @@
 		text-align: center;
 	}
 	.prereq.met .dot {
-		color: #166534;
+		color: var(--accent);
 	}
 	.line {
 		display: flex;
