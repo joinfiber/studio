@@ -52,6 +52,12 @@ describe('parseOsmHours', () => {
 		expect(w[0]).toEqual(open('09:00', '17:00'));
 	});
 
+	it('keeps an overnight range (closes after midnight)', () => {
+		const w = parseOsmHours('Mo-Th 16:00-02:00')!;
+		expect(w[0]).toEqual(open('16:00', '02:00'));
+		expect(w[3]).toEqual(open('16:00', '02:00'));
+	});
+
 	it('returns null for unparseable free text', () => {
 		expect(parseOsmHours('by appointment')).toBeNull();
 		expect(parseOsmHours('')).toBeNull();
@@ -70,13 +76,14 @@ describe('weekFromGooglePeriods', () => {
 		expect(w[1]).toEqual(closed); // Tuesday untouched
 	});
 
-	it('treats a missing close as open-24h and clamps cross-midnight', () => {
+	it('treats a missing close as open-24h and preserves a cross-midnight close', () => {
 		const open24 = weekFromGooglePeriods([{ open: { day: 1, hour: 0, minute: 0 } }]);
 		expect(open24[0]).toEqual(open('00:00', '24:00'));
+		// Fri 20:00 → Sat 02:00 is an overnight span: keep close 02:00 on Friday.
 		const overnight = weekFromGooglePeriods([
 			{ open: { day: 5, hour: 20, minute: 0 }, close: { day: 6, hour: 2, minute: 0 } },
 		]);
-		expect(overnight[4]).toEqual(open('20:00', '24:00')); // Friday clamps to 24:00
+		expect(overnight[4]).toEqual(open('20:00', '02:00'));
 	});
 });
 

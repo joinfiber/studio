@@ -151,7 +151,8 @@ export function parseOsmHours(raw: string): WeekHours | null {
 
 // ── Google Places (New) regularOpeningHours.periods → WeekHours ─────────────
 // Google day: 0=Sunday … 6=Saturday. A period with an open and no close means
-// "open 24 hours". Cross-midnight closes clamp to 24:00 (best-effort).
+// "open 24 hours". A cross-midnight close (e.g. Fri 20:00 → Sat 02:00) keeps its
+// real time on the open day — schema.org reads `closes < opens` as next-day.
 
 export interface GooglePeriodPoint {
 	day?: number;
@@ -179,10 +180,9 @@ export function weekFromGooglePeriods(periods: GooglePeriod[]): WeekHours {
 		const idx = googleDayToIndex(od as number);
 		if (!week[idx].closed) continue; // first interval for the day wins
 		const open = pointTime(period.open) ?? '00:00';
-		// No close → open 24h. Close on a later day → clamp to end of this day.
-		let close = pointTime(period.close);
-		if (!close) close = '24:00';
-		else if (Number.isFinite(period.close?.day) && period.close!.day !== od) close = '24:00';
+		// No close → open 24h. A cross-midnight close keeps its real time (a venue
+		// open 16:00–02:00 stores close 02:00, not a clamped 24:00).
+		const close = pointTime(period.close) ?? '24:00';
 		week[idx] = { closed: false, open, close };
 	}
 	return week;

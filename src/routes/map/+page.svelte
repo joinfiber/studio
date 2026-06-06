@@ -18,6 +18,7 @@
 		applyToAll,
 		DAYS,
 		type WeekHours,
+		type DayHours,
 	} from '$lib/kernel/hours.js';
 	import type { GoogleDetails } from '$lib/kernel/google-details.js';
 
@@ -353,6 +354,16 @@
 	function hoursSetCount(w: WeekHours): number {
 		return w.filter((d) => !d.closed && d.open && d.close).length;
 	}
+	function isOvernight(d: DayHours): boolean {
+		if (d.closed) return false;
+		const toMin = (s: string) => {
+			const m = s.match(/^(\d{1,2}):(\d{2})$/);
+			return m ? +m[1] * 60 + +m[2] : NaN;
+		};
+		const o = toMin(d.open);
+		const c = toMin(d.close);
+		return Number.isFinite(o) && Number.isFinite(c) && c < o; // closes after midnight
+	}
 
 	async function addSelected() {
 		if (!selected || !draft) return;
@@ -570,9 +581,8 @@
 					paint: {
 						'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 3, 14, 6],
 						'circle-color': ['case', ['get', 'verified'], '#2563eb', '#eab308'],
-						// Reviewed venues wear a green ring — progress accrues as you work.
-						'circle-stroke-width': ['case', ['get', 'reviewed'], 2.5, 1],
-						'circle-stroke-color': ['case', ['get', 'reviewed'], '#16a34a', '#ffffff'],
+						'circle-stroke-width': 1,
+						'circle-stroke-color': '#ffffff',
 						'circle-opacity': 0.95,
 					},
 				});
@@ -675,7 +685,6 @@
 			<span class="swatch osm"></span> OpenStreetMap
 			<span class="swatch in-commons"></span> In the Commons
 			<span class="swatch claimed"></span> Claimed
-			<span class="swatch reviewed"></span> Reviewed
 		</div>
 		{#if zoomLow}
 			<div class="map-hint">Zoom in to see nearby businesses</div>
@@ -816,6 +825,7 @@
 										<input class="htime" type="text" inputmode="numeric" bind:value={week[i].open} placeholder="09:00" />
 										<span class="hdash">–</span>
 										<input class="htime" type="text" inputmode="numeric" bind:value={week[i].close} placeholder="17:00" />
+										{#if isOvernight(day)}<span class="overnight" title="Closes after midnight (next day)">+1d</span>{/if}
 									{/if}
 									<label class="hcheck" title="Closed this day"><input type="checkbox" bind:checked={week[i].closed} /></label>
 								</div>
@@ -876,7 +886,7 @@
 	</div>
 	<p class="hint">
 		Gray = OpenStreetMap (click to add) · yellow = in the Commons (click to review &amp; edit) ·
-		blue = claimed · green ring = reviewed. Filter by review state above to work through the slate.
+		blue = claimed. Filter by <strong>needs review / reviewed</strong> above to work through the slate.
 	</p>
 {/if}
 
@@ -1013,11 +1023,6 @@
 	}
 	.swatch.claimed {
 		background: #2563eb;
-		margin-left: 0.55rem;
-	}
-	.swatch.reviewed {
-		background: #eab308;
-		border: 2px solid #16a34a;
 		margin-left: 0.55rem;
 	}
 	.map-hint {
@@ -1372,6 +1377,16 @@
 	}
 	.hdash {
 		color: #bbb;
+	}
+	.overnight {
+		flex-shrink: 0;
+		font-size: 0.62rem;
+		font-weight: 600;
+		color: #b45309;
+		background: #fff7ed;
+		border: 1px solid #fed7aa;
+		border-radius: 3px;
+		padding: 0 0.25rem;
 	}
 	.hcheck {
 		margin-left: auto;
