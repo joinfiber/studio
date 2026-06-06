@@ -56,7 +56,11 @@
 		editingId = null;
 		draft = null;
 	}
-	const csv = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean);
+	const csv = (s: string) =>
+		s
+			.split(',')
+			.map((x) => x.trim())
+			.filter(Boolean);
 
 	// Only changed fields — the Commons PATCH is a partial merge.
 	function buildPatch(o: LiveOrg, d: OrgDraft): Record<string, unknown> {
@@ -145,7 +149,8 @@
 		<select
 			aria-label="Verification"
 			value={f.verified}
-			onchange={(e) => setParam('verified', e.currentTarget.value === 'all' ? '' : e.currentTarget.value)}
+			onchange={(e) =>
+				setParam('verified', e.currentTarget.value === 'all' ? '' : e.currentTarget.value)}
 		>
 			<option value="all">All</option>
 			<option value="verified">Verified only</option>
@@ -153,7 +158,9 @@
 		{#if data.contributorSlug}
 			<div class="toggle">
 				<button class:active={f.owner === 'all'} onclick={() => setParam('owner', '')}>All</button>
-				<button class:active={f.owner === 'mine'} onclick={() => setParam('owner', 'mine')}>Mine</button>
+				<button class:active={f.owner === 'mine'} onclick={() => setParam('owner', 'mine')}
+					>Mine</button
+				>
 			</div>
 		{/if}
 		<label class="check">
@@ -175,15 +182,21 @@
 		<ul class="items">
 			{#each shown as o (o.id)}
 				<li class="row" class:expanded={expandedId === o.id}>
-					<button class="row-summary" onclick={() => (expandedId = expandedId === o.id ? null : o.id)}>
+					<button
+						class="row-summary"
+						onclick={() => (expandedId = expandedId === o.id ? null : o.id)}
+					>
 						<div class="item-main">
 							<div class="line">
 								<span class="name">{o.name}</span>
-								{#if o.verified}<span class="badge claimed" title="Verified — claimed">✓ claimed</span>
+								{#if o.verified}<span class="badge claimed" title="Verified — claimed"
+										>✓ claimed</span
+									>
 								{:else}<span class="badge unclaimed">unclaimed</span>{/if}
 							</div>
 							<div class="subtitle">
-								{#if o.hasPlace}{o.placeName ?? 'venue'}{#if o.city} · {o.city}{/if}{:else}<span class="muted">no location</span>{/if}
+								{#if o.hasPlace}{o.placeName ?? 'venue'}{#if o.city}
+										· {o.city}{/if}{:else}<span class="muted">no location</span>{/if}
 								{#if o.tags.length}<span class="dot">·</span>{o.tags.slice(0, 3).join(', ')}{/if}
 							</div>
 						</div>
@@ -216,61 +229,114 @@
 								>
 									<input type="hidden" name="id" value={o.id} />
 									<input type="hidden" name="patch" value={JSON.stringify(buildPatch(o, draft))} />
-									<label class="field"><span>Name</span><input type="text" bind:value={draft.name} /></label>
+									<label class="field"
+										><span>Name</span><input type="text" bind:value={draft.name} /></label
+									>
 									<div class="grid">
-										<label class="field"><span>Type</span>
+										<label class="field"
+											><span>Type</span>
 											<select bind:value={draft.commercial}>
 												<option value="unspecified">unspecified</option>
 												<option value="true">commercial</option>
 												<option value="false">community</option>
 											</select>
 										</label>
-										<label class="field"><span>Website</span><input type="text" bind:value={draft.url} placeholder="https://…" /></label>
+										<label class="field"
+											><span>Website</span><input
+												type="text"
+												bind:value={draft.url}
+												placeholder="https://…"
+											/></label
+										>
 									</div>
-									<label class="field"><span>Description</span><textarea rows="2" bind:value={draft.description}></textarea></label>
+									<label class="field"
+										><span>Description</span><textarea rows="2" bind:value={draft.description}
+										></textarea></label
+									>
 									<div class="grid">
-										<label class="field"><span>Phone</span><input type="text" bind:value={draft.telephone} /></label>
-										<label class="field"><span>Email</span><input type="text" bind:value={draft.email} /></label>
+										<label class="field"
+											><span>Phone</span><input type="text" bind:value={draft.telephone} /></label
+										>
+										<label class="field"
+											><span>Email</span><input type="text" bind:value={draft.email} /></label
+										>
 									</div>
-									<label class="field"><span>Social links <span class="opt">(comma-separated)</span></span><input type="text" bind:value={draft.sameAs} placeholder="https://instagram.com/…" /></label>
+									<label class="field"
+										><span>Social links <span class="opt">(comma-separated)</span></span><input
+											type="text"
+											bind:value={draft.sameAs}
+											placeholder="https://instagram.com/…"
+										/></label
+									>
 									<div class="grid">
-										<label class="field"><span>Logo URL</span><input type="text" bind:value={draft.logo} /></label>
-										<label class="field"><span>Tags <span class="opt">(comma-separated)</span></span><input type="text" bind:value={draft.tags} /></label>
+										<label class="field"
+											><span>Logo URL</span><input type="text" bind:value={draft.logo} /></label
+										>
+										<label class="field"
+											><span>Tags <span class="opt">(comma-separated)</span></span><input
+												type="text"
+												bind:value={draft.tags}
+											/></label
+										>
 									</div>
 									<p class="edit-note">
-										Editing the organization’s own facts. Hours, the linked place, and authority
-										(<code>{methodLabel(o.method)}</code>) aren’t editable here — the Commons sets
-										authority on verification.
+										Editing the organization’s own facts. Hours, the linked place, and authority (<code
+											>{methodLabel(o.method)}</code
+										>) aren’t editable here — the Commons sets authority on verification.
 									</p>
 									<div class="edit-actions">
-										<button type="submit" class="primary" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button>
+										<button type="submit" class="primary" disabled={saving}
+											>{saving ? 'Saving…' : 'Save changes'}</button
+										>
 										<button type="button" class="ghost" onclick={cancelEdit}>Cancel</button>
 									</div>
 								</form>
 							{:else}
 								<dl>
-									{#if o.description}<dt>About</dt><dd>{o.description}</dd>{/if}
+									{#if o.description}<dt>About</dt>
+										<dd>{o.description}</dd>{/if}
 									<dt>Location</dt>
-									<dd>{o.address ?? (o.hasPlace ? (o.placeName ?? 'venue') : 'No location (touring / online)')}</dd>
-									{#if o.url}<dt>Website</dt><dd><a href={o.url} target="_blank" rel="noopener noreferrer">{o.url}</a></dd>{/if}
-									{#if o.telephone}<dt>Phone</dt><dd>{o.telephone}</dd>{/if}
-									{#if o.email}<dt>Email</dt><dd>{o.email}</dd>{/if}
-									{#if o.sameAs.length}<dt>Social</dt><dd>{#each o.sameAs as s}<a href={s} target="_blank" rel="noopener noreferrer">{s}</a>{' '}{/each}</dd>{/if}
-									{#if o.tags.length}<dt>Tags</dt><dd>{o.tags.join(', ')}</dd>{/if}
+									<dd>
+										{o.address ??
+											(o.hasPlace ? (o.placeName ?? 'venue') : 'No location (touring / online)')}
+									</dd>
+									{#if o.url}<dt>Website</dt>
+										<dd>
+											<a href={o.url} target="_blank" rel="noopener noreferrer">{o.url}</a>
+										</dd>{/if}
+									{#if o.telephone}<dt>Phone</dt>
+										<dd>{o.telephone}</dd>{/if}
+									{#if o.email}<dt>Email</dt>
+										<dd>{o.email}</dd>{/if}
+									{#if o.sameAs.length}<dt>Social</dt>
+										<dd>
+											{#each o.sameAs as s}<a href={s} target="_blank" rel="noopener noreferrer"
+													>{s}</a
+												>{' '}{/each}
+										</dd>{/if}
+									{#if o.tags.length}<dt>Tags</dt>
+										<dd>{o.tags.join(', ')}</dd>{/if}
 									<dt>Status</dt>
 									<dd>
-										{#if o.verified}<span class="badge claimed">✓ claimed</span>{:else}<span class="badge unclaimed">unclaimed</span>{/if}
+										{#if o.verified}<span class="badge claimed">✓ claimed</span>{:else}<span
+												class="badge unclaimed">unclaimed</span
+											>{/if}
 										<span class="auth-note">
-											{#if o.verified}Claimed — a business verified itself through an ecosystem app; its info is under its control.
-											{:else}Not yet claimed — imported or operator-entered data, editable here until a business formally claims it.{/if}
+											{#if o.verified}Claimed — a business verified itself through an ecosystem app;
+												its info is under its control.
+											{:else}Not yet claimed — imported or operator-entered data, editable here
+												until a business formally claims it.{/if}
 										</span>
 									</dd>
 									<dt>Provenance</dt>
 									<dd>
 										<span class="mono">{methodLabel(o.method)}</span>
-										<span class="auth-note" style="display:inline"> · how the data arrived (Commons-set; not the claim signal)</span>
+										<span class="auth-note" style="display:inline">
+											· how the data arrived (Commons-set; not the claim signal)</span
+										>
 									</dd>
-									<dt>Slug</dt><dd class="mono">{o.slug}</dd>
+									<dt>Slug</dt>
+									<dd class="mono">{o.slug}</dd>
 								</dl>
 								<button type="button" class="edit-btn" onclick={() => startEdit(o)}>Edit</button>
 							{/if}
@@ -282,9 +348,18 @@
 
 		{#if hasPrev || hasNext}
 			<div class="pager">
-				<button disabled={!hasPrev} onclick={() => setParam('offset', String(Math.max(0, f.offset - f.pageSize)))}>← Prev</button>
-				<span class="range">{orgs.length === 0 ? 0 : f.offset + 1}–{f.offset + orgs.length} of {total}</span>
-				<button disabled={!hasNext} onclick={() => setParam('offset', String(f.offset + f.pageSize))}>Next →</button>
+				<button
+					disabled={!hasPrev}
+					onclick={() => setParam('offset', String(Math.max(0, f.offset - f.pageSize)))}
+					>← Prev</button
+				>
+				<span class="range"
+					>{orgs.length === 0 ? 0 : f.offset + 1}–{f.offset + orgs.length} of {total}</span
+				>
+				<button
+					disabled={!hasNext}
+					onclick={() => setParam('offset', String(f.offset + f.pageSize))}>Next →</button
+				>
 			</div>
 		{/if}
 	{/if}

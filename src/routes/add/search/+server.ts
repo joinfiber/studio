@@ -62,7 +62,11 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		let commons: { id: string; name: string; slug: string }[] = [];
 		if (sdk) {
 			const r = await sdk.GET('/organizations', { params: { query: { q, limit: 6 } } });
-			commons = (r.data?.organizations ?? []).map((o) => ({ id: o.id, name: o.name, slug: o.slug }));
+			commons = (r.data?.organizations ?? []).map((o) => ({
+				id: o.id,
+				name: o.name,
+				slug: o.slug,
+			}));
 		}
 		return json({ commons, osm });
 	}

@@ -135,8 +135,8 @@
 	<div class="empty">
 		<p>Library shows events this instance can see in the Commons.</p>
 		<p class="hint">
-			Set <code>COMMONS_SERVICE_KEY</code> (and redeploy) to load live data. An admin key sees the
-			whole catalog; a standard key sees its own.
+			Set <code>COMMONS_SERVICE_KEY</code> (and redeploy) to load live data. An admin key sees the whole
+			catalog; a standard key sees its own.
 		</p>
 	</div>
 {:else}
@@ -147,21 +147,27 @@
 		<select
 			aria-label="Status"
 			value={f.status}
-			onchange={(e) => setParam('status', e.currentTarget.value === 'all' ? '' : e.currentTarget.value)}
+			onchange={(e) =>
+				setParam('status', e.currentTarget.value === 'all' ? '' : e.currentTarget.value)}
 		>
 			<option value="all">All statuses</option>
 			<option value="published">Published</option>
 			<option value="pending_review">Pending</option>
 			<option value="draft">Draft</option>
 		</select>
-		<select aria-label="Category" value={f.category} onchange={(e) => setParam('category', e.currentTarget.value)}>
+		<select
+			aria-label="Category"
+			value={f.category}
+			onchange={(e) => setParam('category', e.currentTarget.value)}
+		>
 			<option value="">All categories</option>
 			{#each CATEGORIES as c}<option value={c.slug}>{c.label}</option>{/each}
 		</select>
 		<select
 			aria-label="Time"
 			value={f.time}
-			onchange={(e) => setParam('time', e.currentTarget.value === 'all' ? '' : e.currentTarget.value)}
+			onchange={(e) =>
+				setParam('time', e.currentTarget.value === 'all' ? '' : e.currentTarget.value)}
 		>
 			<option value="all">Any time</option>
 			<option value="upcoming">Upcoming</option>
@@ -170,7 +176,8 @@
 		<select
 			aria-label="Provenance"
 			value={f.method}
-			onchange={(e) => setParam('method', e.currentTarget.value === 'all' ? '' : e.currentTarget.value)}
+			onchange={(e) =>
+				setParam('method', e.currentTarget.value === 'all' ? '' : e.currentTarget.value)}
 		>
 			<option value="all">Any source</option>
 			<option value="self_asserted">Self-asserted</option>
@@ -194,7 +201,9 @@
 								{#if ev.recurrence}<span class="recurring" title="Recurring">↻</span>{/if}
 							</div>
 							<div class="subtitle">
-								{ev.venue ?? 'No venue'}{#if ev.date} · {formatDate(ev.date)}{#if ev.time} {ev.time}{/if}{/if}
+								{ev.venue ?? 'No venue'}{#if ev.date}
+									· {formatDate(ev.date)}{#if ev.time}
+										{ev.time}{/if}{/if}
 							</div>
 						</div>
 						<div class="item-meta">
@@ -236,19 +245,32 @@
 								<!-- Origin facts: read-only (no hover-lift). They can't be patched
 								     via a service key, so they read as context, not fields. -->
 								<div class="ro">
-									{formatDate(ev.date)}{#if ev.time} · {ev.time}{#if ev.endTime}–{ev.endTime}{/if}{/if}
+									{formatDate(ev.date)}{#if ev.time}
+										· {ev.time}{#if ev.endTime}–{ev.endTime}{/if}{/if}
 									<span class="muted">({ev.timezone})</span>
 									<span class="sep">·</span>
-									{ev.venue ?? 'No venue'}{#if ev.address}<span class="muted"> · {ev.address}</span>{/if}
+									{ev.venue ?? 'No venue'}{#if ev.address}<span class="muted">
+											· {ev.address}</span
+										>{/if}
 								</div>
 
 								<!-- Editable in place: hover to see the lift, click to edit. -->
 								<div class="edit-row">
-									<select class="inline cat" name="category" bind:value={draft.category} aria-label="Category">
+									<select
+										class="inline cat"
+										name="category"
+										bind:value={draft.category}
+										aria-label="Category"
+									>
 										{#each CATEGORIES as c}<option value={c.slug}>{c.label}</option>{/each}
 									</select>
 									<span class="sep">·</span>
-									<select class="inline status-sel" name="status" bind:value={draft.status} aria-label="Status">
+									<select
+										class="inline status-sel"
+										name="status"
+										bind:value={draft.status}
+										aria-label="Status"
+									>
 										<option value="published">published</option>
 										<option value="pending_review">pending</option>
 										<option value="draft">draft</option>
@@ -274,22 +296,45 @@
 								></textarea>
 
 								<div class="extras">
-									<input class="inline price" type="text" name="price" bind:value={draft.price} placeholder="Price" aria-label="Price" />
+									<input
+										class="inline price"
+										type="text"
+										name="price"
+										bind:value={draft.price}
+										placeholder="Price"
+										aria-label="Price"
+									/>
 									<label class="check">
-										<input type="checkbox" name="open_window" value="true" bind:checked={draft.openWindow} /> open window
+										<input
+											type="checkbox"
+											name="open_window"
+											value="true"
+											bind:checked={draft.openWindow}
+										/> open window
 									</label>
 									<label class="check">
-										<input type="checkbox" name="wheelchair_accessible" value="true" bind:checked={draft.wheelchairAccessible} /> wheelchair accessible
+										<input
+											type="checkbox"
+											name="wheelchair_accessible"
+											value="true"
+											bind:checked={draft.wheelchairAccessible}
+										/> wheelchair accessible
 									</label>
 									{#if ev.sourceFeedUrl}
-										<a class="src" href={ev.sourceFeedUrl} target="_blank" rel="noopener noreferrer">source ↗</a>
+										<a class="src" href={ev.sourceFeedUrl} target="_blank" rel="noopener noreferrer"
+											>source ↗</a
+										>
 									{/if}
 								</div>
 
 								{#if dirty}
 									<div class="save-row" transition:slide={{ duration: 150 }}>
-										<button type="button" class="link" onclick={() => (draft = makeDraft(ev))}>Revert</button>
-										<button type="submit" class="primary" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button>
+										<button type="button" class="link" onclick={() => (draft = makeDraft(ev))}
+											>Revert</button
+										>
+										<button type="submit" class="primary" disabled={saving}
+											>{saving ? 'Saving…' : 'Save changes'}</button
+										>
 									</div>
 								{/if}
 							</form>
@@ -301,11 +346,17 @@
 
 		{#if hasPrev || hasNext}
 			<div class="pager">
-				<button disabled={!hasPrev} onclick={() => setParam('offset', String(Math.max(0, f.offset - f.pageSize)))}>
+				<button
+					disabled={!hasPrev}
+					onclick={() => setParam('offset', String(Math.max(0, f.offset - f.pageSize)))}
+				>
 					← Prev
 				</button>
 				<span class="range">{pageStart}–{pageEnd} of {total}</span>
-				<button disabled={!hasNext} onclick={() => setParam('offset', String(f.offset + f.pageSize))}>
+				<button
+					disabled={!hasNext}
+					onclick={() => setParam('offset', String(f.offset + f.pageSize))}
+				>
 					Next →
 				</button>
 			</div>
@@ -522,7 +573,9 @@
 		padding: 2px 5px;
 		margin: -2px -5px;
 		border-radius: 4px;
-		transition: background-color 100ms ease, border-color 100ms ease;
+		transition:
+			background-color 100ms ease,
+			border-color 100ms ease;
 	}
 	.inline:hover {
 		background: #eceeec;

@@ -16,7 +16,10 @@ export const load: PageServerLoad = ({ locals }) => ({
 	defaultGroups: ['music_nightlife', 'arts_culture', 'food_drink', 'community'],
 });
 
-async function createVenueOrg(sdk: Sdk, v: VenueCandidate): Promise<{ ok: boolean; error?: string }> {
+async function createVenueOrg(
+	sdk: Sdk,
+	v: VenueCandidate,
+): Promise<{ ok: boolean; error?: string }> {
 	const place = await sdk.POST('/service/places', {
 		body: { name: v.name, geo: { latitude: v.lat, longitude: v.lng }, address: v.address },
 	});
@@ -39,7 +42,10 @@ async function createVenueOrg(sdk: Sdk, v: VenueCandidate): Promise<{ ok: boolea
 	if (!org.data) {
 		const status = org.response.status;
 		// Slug collision = this org name already exists; treat as a soft skip.
-		return { ok: false, error: status === 409 ? 'already exists' : org.error?.error?.message ?? `org ${status}` };
+		return {
+			ok: false,
+			error: status === 409 ? 'already exists' : (org.error?.error?.message ?? `org ${status}`),
+		};
 	}
 	return { ok: true };
 }

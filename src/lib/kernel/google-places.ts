@@ -49,7 +49,9 @@ export async function findGooglePlaceId(
 			signal: AbortSignal.timeout(15000),
 		});
 		if (!res.ok) {
-			console.warn(`[google-places] place_id lookup returned ${res.status} (publishing without id)`);
+			console.warn(
+				`[google-places] place_id lookup returned ${res.status} (publishing without id)`,
+			);
 			return null;
 		}
 		const data = (await res.json()) as { places?: { id?: string }[] };

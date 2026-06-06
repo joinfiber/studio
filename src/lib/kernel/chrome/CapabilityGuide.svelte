@@ -24,7 +24,10 @@
 				<div class="prereq-body">
 					<span class="line">
 						<code>{p.env}</code>
-						<span class="plabel">{p.label}{#if p.optional} · optional{/if}</span>
+						<span class="plabel"
+							>{p.label}{#if p.optional}
+								· optional{/if}</span
+						>
 					</span>
 					{#if !p.met}
 						<div class="howto">{p.howto}</div>

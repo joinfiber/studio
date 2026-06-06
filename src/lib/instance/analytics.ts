@@ -22,7 +22,7 @@ export interface DownstreamConsumer {
 	slug: string;
 	name: string;
 	tagline?: string | null;
-	last_active_at: string;        // ISO 8601
+	last_active_at: string; // ISO 8601
 	events_delivered_30d: number;
 }
 

@@ -96,9 +96,9 @@
 	{#if !sourceReady}
 		<div class="gate">
 			<p class="gate-intro">
-				Submissions is where user-generated content from an app you operate gets moderated —
-				people submit events through your app, you publish the ones you approve. Connect your
-				app's submission queue to start:
+				Submissions is where user-generated content from an app you operate gets moderated — people
+				submit events through your app, you publish the ones you approve. Connect your app's
+				submission queue to start:
 			</p>
 			{#if data.capability}<CapabilityGuide capability={data.capability} />{/if}
 		</div>
@@ -120,8 +120,10 @@
 						<h3 class="title">{s.content}</h3>
 						<div class="meta">
 							{formatDateTime(s.event_at)}
-							{#if s.category}<span class="dot">·</span><span class="category">{s.category}</span>{/if}
-							{#if s.from_poster_scan}<span class="dot">·</span><span class="tag">poster scan</span>{/if}
+							{#if s.category}<span class="dot">·</span><span class="category">{s.category}</span
+								>{/if}
+							{#if s.from_poster_scan}<span class="dot">·</span><span class="tag">poster scan</span
+								>{/if}
 						</div>
 						<div class="venue">{s.place_name ?? 'No venue'}</div>
 						{#if s.description}<p class="desc">{s.description}</p>{/if}
@@ -131,14 +133,15 @@
 								method="POST"
 								action="?/reject"
 								class="reject-form"
-								use:enhance={() => async ({ result }) => {
-									if (result.type === 'success') {
-										toast.push(`Rejected: ${s.content}`, 'success');
-										removeFromQueue(s.id);
-									} else if (result.type === 'failure') {
-										toast.push(String(result.data?.error ?? 'Reject failed.'), 'error');
-									}
-								}}
+								use:enhance={() =>
+									async ({ result }) => {
+										if (result.type === 'success') {
+											toast.push(`Rejected: ${s.content}`, 'success');
+											removeFromQueue(s.id);
+										} else if (result.type === 'failure') {
+											toast.push(String(result.data?.error ?? 'Reject failed.'), 'error');
+										}
+									}}
 							>
 								<input type="hidden" name="id" value={s.id} />
 								<input
@@ -148,26 +151,32 @@
 									placeholder="Optional reason (sent to the submitter)"
 								/>
 								<button type="submit" class="danger">Confirm reject</button>
-								<button type="button" onclick={() => ((rejectingId = null), (rejectReason = ''))}>Cancel</button>
+								<button type="button" onclick={() => ((rejectingId = null), (rejectReason = ''))}
+									>Cancel</button
+								>
 							</form>
 						{:else}
 							<div class="actions">
 								<form
 									method="POST"
 									action="?/approve"
-									use:enhance={() => async ({ result }) => {
-										if (result.type === 'success') {
-											toast.push(`Approved: ${s.content}`, 'success');
-											removeFromQueue(s.id);
-										} else if (result.type === 'failure') {
-											toast.push(String(result.data?.error ?? 'Approve failed.'), 'error');
-										}
-									}}
+									use:enhance={() =>
+										async ({ result }) => {
+											if (result.type === 'success') {
+												toast.push(`Approved: ${s.content}`, 'success');
+												removeFromQueue(s.id);
+											} else if (result.type === 'failure') {
+												toast.push(String(result.data?.error ?? 'Approve failed.'), 'error');
+											}
+										}}
 								>
 									<input type="hidden" name="id" value={s.id} />
 									<button type="submit" class="primary">Approve</button>
 								</form>
-								<button class="danger-outline" onclick={() => ((rejectingId = s.id), (rejectReason = ''))}>
+								<button
+									class="danger-outline"
+									onclick={() => ((rejectingId = s.id), (rejectReason = ''))}
+								>
 									Reject
 								</button>
 								{#if s.link_url}
@@ -188,8 +197,8 @@
 	<div class="ingested">
 		<p class="lead">No candidates in the queue.</p>
 		<p class="hint">
-			Import from a <a href="/sources">Source</a> and choose <strong>Save to queue</strong> to stage
-			candidates here. They persist until you publish or reject them.
+			Import from a <a href="/sources">Source</a> and choose <strong>Save to queue</strong> to stage candidates
+			here. They persist until you publish or reject them.
 		</p>
 	</div>
 {:else}
@@ -230,9 +239,11 @@
 						<div class="ititle">{c.candidate.data.name}</div>
 						<div class="imeta">
 							{formatDateTime(c.candidate.data.start)}
-							{#if c.candidate.data.location?.name}<span class="dot">·</span>{c.candidate.data.location.name}{/if}
+							{#if c.candidate.data.location?.name}<span class="dot">·</span>{c.candidate.data
+									.location.name}{/if}
 							<span class="dot">·</span><span class="tag">{c.source_tool}</span>
-							{#if c.organizer}<span class="dot">·</span><span class="org">{c.organizer}</span>{:else}<span class="dot">·</span><span class="org missing">no organizer</span>{/if}
+							{#if c.organizer}<span class="dot">·</span><span class="org">{c.organizer}</span
+								>{:else}<span class="dot">·</span><span class="org missing">no organizer</span>{/if}
 						</div>
 					</div>
 					<div class="iactions">
@@ -240,29 +251,33 @@
 						<form
 							method="POST"
 							action="?/queuePublish"
-							use:enhance={() => async ({ result }) => {
-								if (result.type === 'success') {
-									toast.push(`Published: ${c.candidate.data.name}`, 'success');
-									removeIngested(c.id);
-								} else if (result.type === 'failure') {
-									toast.push(String(result.data?.error ?? 'Publish failed.'), 'error', 6000);
-								}
-							}}
+							use:enhance={() =>
+								async ({ result }) => {
+									if (result.type === 'success') {
+										toast.push(`Published: ${c.candidate.data.name}`, 'success');
+										removeIngested(c.id);
+									} else if (result.type === 'failure') {
+										toast.push(String(result.data?.error ?? 'Publish failed.'), 'error', 6000);
+									}
+								}}
 						>
 							<input type="hidden" name="id" value={c.id} />
-							<button type="submit" class="primary" disabled={!data.commonsConfigured}>Publish</button>
+							<button type="submit" class="primary" disabled={!data.commonsConfigured}
+								>Publish</button
+							>
 						</form>
 						<form
 							method="POST"
 							action="?/queueReject"
-							use:enhance={() => async ({ result }) => {
-								if (result.type === 'success') {
-									toast.push('Removed from queue.', 'success');
-									removeIngested(c.id);
-								} else if (result.type === 'failure') {
-									toast.push(String(result.data?.error ?? 'Reject failed.'), 'error');
-								}
-							}}
+							use:enhance={() =>
+								async ({ result }) => {
+									if (result.type === 'success') {
+										toast.push('Removed from queue.', 'success');
+										removeIngested(c.id);
+									} else if (result.type === 'failure') {
+										toast.push(String(result.data?.error ?? 'Reject failed.'), 'error');
+									}
+								}}
 						>
 							<input type="hidden" name="id" value={c.id} />
 							<button type="submit" class="danger-outline">Reject</button>

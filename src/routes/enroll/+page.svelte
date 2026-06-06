@@ -17,7 +17,10 @@
 {#if form?.confirmed}
 	<section class="card success">
 		<h3>Code confirmed ✓</h3>
-		<p>Your authenticator is working. To require MFA at login, set this in your environment and redeploy:</p>
+		<p>
+			Your authenticator is working. To require MFA at login, set this in your environment and
+			redeploy:
+		</p>
 		<pre class="secret-block">STUDIO_TOTP_SECRET={form.secret}</pre>
 		<p class="note">
 			Treat this like a password — it's the seed your authenticator uses. Until it's set and the
@@ -63,7 +66,9 @@
 			<p class="status inactive">MFA is not set up yet — this instance is password-only.</p>
 		{/if}
 		<form method="POST" action="?/begin">
-			<button type="submit" class="primary">{data.alreadyEnabled ? 'Re-enroll' : 'Set up MFA'}</button>
+			<button type="submit" class="primary"
+				>{data.alreadyEnabled ? 'Re-enroll' : 'Set up MFA'}</button
+			>
 		</form>
 	</section>
 {/if}

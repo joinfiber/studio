@@ -69,7 +69,11 @@ export function assertSafeUrl(raw: string): URL {
  * private/internal one (the SSRF gap a one-shot host check misses). Bounded
  * hops; returns the final Response. (DNS-rebinding remains out of scope.)
  */
-export async function safeFetch(rawUrl: string, init?: RequestInit, maxHops = 4): Promise<Response> {
+export async function safeFetch(
+	rawUrl: string,
+	init?: RequestInit,
+	maxHops = 4,
+): Promise<Response> {
 	let url = assertSafeUrl(rawUrl).toString();
 	for (let hop = 0; hop <= maxHops; hop++) {
 		const res = await fetch(url, { ...init, redirect: 'manual' });

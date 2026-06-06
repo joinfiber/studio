@@ -154,7 +154,8 @@
 	<p class="explainer">
 		An <Term id="organizer">organization</Term> is the entity that runs things — a venue, host, shop,
 		or group, and what events attach to. Add a location below and it becomes a venue (an organization
-		at a <Term id="venue">place</Term>). Picking an OpenStreetMap match autofills the address and links.
+		at a <Term id="venue">place</Term>). Picking an OpenStreetMap match autofills the address and
+		links.
 	</p>
 	<form
 		class="form"
@@ -165,7 +166,10 @@
 			return async ({ result, update }) => {
 				submitting = false;
 				if (result.type === 'success' && result.data?.success) {
-					toast.push(`Published organization “${result.data.name}” (${result.data.slug})`, 'success');
+					toast.push(
+						`Published organization “${result.data.name}” (${result.data.slug})`,
+						'success',
+					);
 					resetForm();
 					await update({ reset: true });
 				} else if (result.type === 'failure') {
@@ -213,7 +217,11 @@
 
 		<label>
 			<span>Description</span>
-			<textarea name="description" rows="2" placeholder="Music venue, bar, and restaurant in Fishtown."></textarea>
+			<textarea
+				name="description"
+				rows="2"
+				placeholder="Music venue, bar, and restaurant in Fishtown."
+			></textarea>
 		</label>
 		<div class="row">
 			<label class="half">
@@ -227,7 +235,12 @@
 		</div>
 		<label>
 			<span>Social links <span class="opt">(comma-separated)</span></span>
-			<input type="text" name="sameAs" bind:value={orgSameAs} placeholder="https://instagram.com/…, https://facebook.com/…" />
+			<input
+				type="text"
+				name="sameAs"
+				bind:value={orgSameAs}
+				placeholder="https://instagram.com/…, https://facebook.com/…"
+			/>
 		</label>
 		<div class="row">
 			<label class="half">
@@ -251,7 +264,9 @@
 			<button type="submit" class="primary" disabled={submitting}>
 				{submitting ? 'Publishing…' : 'Publish'}
 			</button>
-			<span class="hint">Method: <Term id="self_asserted">self_asserted</Term> · creates an organization in Commons</span>
+			<span class="hint"
+				>Method: <Term id="self_asserted">self_asserted</Term> · creates an organization in Commons</span
+			>
 		</div>
 	</form>
 {:else if kind === 'event'}
@@ -323,15 +338,17 @@
 			<button type="submit" class="primary" disabled={submitting}>
 				{submitting ? 'Publishing…' : 'Publish'}
 			</button>
-			<span class="hint">Method: <Term id="self_asserted">self_asserted</Term> · attaches to the organizer org</span>
+			<span class="hint"
+				>Method: <Term id="self_asserted">self_asserted</Term> · attaches to the organizer org</span
+			>
 		</div>
 	</form>
 {:else if kind === 'place'}
 	<p class="explainer">
-		A <Term id="venue">Place</Term> is a bare physical location — a park, a building, a stretch of
-		sidewalk — with no operator attached. Usually you want an
-		<Term id="organizer">Organization</Term> instead (which links its own place). Add a Place only
-		when you need the location on its own.
+		A <Term id="venue">Place</Term> is a bare physical location — a park, a building, a stretch of sidewalk
+		— with no operator attached. Usually you want an
+		<Term id="organizer">Organization</Term> instead (which links its own place). Add a Place only when
+		you need the location on its own.
 	</p>
 	<form
 		class="form"
@@ -421,7 +438,9 @@
 		padding: 0.3rem 0.7rem;
 		border-radius: 5px;
 		cursor: pointer;
-		transition: background-color 100ms ease, color 100ms ease;
+		transition:
+			background-color 100ms ease,
+			color 100ms ease;
 	}
 	.kind-picker button:hover {
 		background: #f0f0f0;
@@ -473,7 +492,9 @@
 		color: #222;
 		background: #fff;
 		outline: none;
-		transition: border-color 100ms ease, box-shadow 100ms ease;
+		transition:
+			border-color 100ms ease,
+			box-shadow 100ms ease;
 	}
 	input:focus,
 	select:focus,

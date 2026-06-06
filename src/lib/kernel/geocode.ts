@@ -127,11 +127,7 @@ function socialUrl(platform: 'instagram' | 'facebook' | 'twitter', value: string
 	if (/^https?:\/\//i.test(v)) return v;
 	const handle = v.replace(/^@/, '');
 	const host =
-		platform === 'instagram'
-			? 'instagram.com'
-			: platform === 'facebook'
-				? 'facebook.com'
-				: 'x.com';
+		platform === 'instagram' ? 'instagram.com' : platform === 'facebook' ? 'facebook.com' : 'x.com';
 	return `https://${host}/${handle}`;
 }
 

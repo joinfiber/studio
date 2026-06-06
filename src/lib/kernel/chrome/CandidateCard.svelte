@@ -30,12 +30,7 @@
 		<input class="title" type="text" bind:value={candidate.data.name} />
 
 		<div class="meta-row">
-			<input
-				class="time"
-				type="text"
-				bind:value={candidate.data.start}
-				aria-label="Start time"
-			/>
+			<input class="time" type="text" bind:value={candidate.data.start} aria-label="Start time" />
 			<span class="dot">·</span>
 			<select class="category" bind:value={candidate.data.category} aria-label="Category">
 				{#each CATEGORIES as cat}
@@ -57,8 +52,7 @@
 				type="text"
 				value={candidate.data.location.address ?? ''}
 				oninput={(e) =>
-					(candidate.data.location.address =
-						(e.currentTarget as HTMLInputElement).value || null)}
+					(candidate.data.location.address = (e.currentTarget as HTMLInputElement).value || null)}
 				placeholder="Address"
 				aria-label="Address"
 			/>
@@ -70,8 +64,7 @@
 			placeholder="Description"
 			value={candidate.data.description ?? ''}
 			oninput={(e) =>
-				(candidate.data.description =
-					(e.currentTarget as HTMLTextAreaElement).value || null)}
+				(candidate.data.description = (e.currentTarget as HTMLTextAreaElement).value || null)}
 			aria-label="Description"
 		></textarea>
 
@@ -129,7 +122,9 @@
 		padding: 2px 4px;
 		margin: -2px -4px;
 		border-radius: 3px;
-		transition: background-color 100ms ease, border-color 100ms ease;
+		transition:
+			background-color 100ms ease,
+			border-color 100ms ease;
 		width: 100%;
 	}
 	input:hover,

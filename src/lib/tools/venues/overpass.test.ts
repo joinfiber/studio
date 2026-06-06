@@ -56,7 +56,12 @@ describe('mapOverpassElements', () => {
 				'contact:instagram': 'kungfunecktie',
 			},
 		},
-		{ type: 'way', id: 2, center: { lat: 39.975, lon: -75.135 }, tags: { name: 'North Bowl', amenity: 'bar' } },
+		{
+			type: 'way',
+			id: 2,
+			center: { lat: 39.975, lon: -75.135 },
+			tags: { name: 'North Bowl', amenity: 'bar' },
+		},
 		{ type: 'node', id: 3, lat: 39.97, lon: -75.13, tags: { amenity: 'bar' } }, // unnamed → skip
 		{ type: 'node', id: 4, tags: { name: 'No coords', amenity: 'pub' } }, // no lat/lng → skip
 	];

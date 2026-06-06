@@ -41,7 +41,18 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	}
 	// Allowlist the fields a caller may set — don't forward an arbitrary object
 	// to the privileged write.
-	const ALLOWED = ['name', 'url', 'telephone', 'email', 'description', 'logo', 'sameAs', 'tags', 'commercial', 'openingHoursSpecification'];
+	const ALLOWED = [
+		'name',
+		'url',
+		'telephone',
+		'email',
+		'description',
+		'logo',
+		'sameAs',
+		'tags',
+		'commercial',
+		'openingHoursSpecification',
+	];
 	const body: Record<string, unknown> = {};
 	for (const k of ALLOWED) if (k in patch) body[k] = (patch as Record<string, unknown>)[k];
 	if (Object.keys(body).length === 0) {

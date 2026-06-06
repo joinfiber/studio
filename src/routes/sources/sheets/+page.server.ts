@@ -31,7 +31,7 @@ export const actions: Actions = {
 			if (/^\s*<(?:!doctype|html)/i.test(text)) {
 				return fail(400, {
 					error:
-						"That returned a web page, not CSV — the sheet probably isn't shared. In the sheet: Share → General access → \"Anyone with the link\" (Viewer), then paste the link again.",
+						'That returned a web page, not CSV — the sheet probably isn\'t shared. In the sheet: Share → General access → "Anyone with the link" (Viewer), then paste the link again.',
 				});
 			}
 			const { headers, rows } = parseCsv(text);

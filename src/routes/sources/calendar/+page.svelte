@@ -42,8 +42,10 @@
 <header class="head">
 	<h2>Import from a calendar</h2>
 	<p class="sub">
-		Paste an iCal / Google Calendar URL. Events are parsed into <Term id="candidate">candidates</Term> you can tidy before
-		publishing. Imported events are <Term id="proxied">proxied</Term> — attributed to the source URL.
+		Paste an iCal / Google Calendar URL. Events are parsed into <Term id="candidate"
+			>candidates</Term
+		> you can tidy before publishing. Imported events are <Term id="proxied">proxied</Term> — attributed
+		to the source URL.
 	</p>
 </header>
 
@@ -71,7 +73,13 @@
 		placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"
 		required
 	/>
-	<input type="text" name="timezone" value="America/New_York" class="tz" aria-label="Default timezone" />
+	<input
+		type="text"
+		name="timezone"
+		value="America/New_York"
+		class="tz"
+		aria-label="Default timezone"
+	/>
 	<button type="submit" class="primary" disabled={fetching}>
 		{fetching ? 'Fetching…' : 'Fetch'}
 	</button>
@@ -133,7 +141,9 @@
 		{/each}
 	</ul>
 	<p class="note">
-		Preview is editable and in-session. All events publish under the <Term id="organizer">organizer</Term> above, as
+		Preview is editable and in-session. All events publish under the <Term id="organizer"
+			>organizer</Term
+		> above, as
 		<Term id="proxied">proxied</Term> (attributed to the source URL), once approved.
 	</p>
 {/if}
@@ -182,7 +192,9 @@
 		border: 1px solid #d0d0d0;
 		border-radius: 5px;
 		outline: none;
-		transition: border-color 100ms ease, box-shadow 100ms ease;
+		transition:
+			border-color 100ms ease,
+			box-shadow 100ms ease;
 	}
 	.fetch-form .tz {
 		width: 11rem;
@@ -216,7 +228,9 @@
 		border: 1px solid #d0d0d0;
 		border-radius: 5px;
 		outline: none;
-		transition: border-color 100ms ease, box-shadow 100ms ease;
+		transition:
+			border-color 100ms ease,
+			box-shadow 100ms ease;
 	}
 	.publish-bar input[type='text']:focus {
 		border-color: #166534;

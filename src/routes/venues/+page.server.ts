@@ -13,7 +13,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const { commons } = locals;
 
 	const search = (url.searchParams.get('q') ?? '').trim();
-	const verified: VerifiedFilter = url.searchParams.get('verified') === 'verified' ? 'verified' : 'all';
+	const verified: VerifiedFilter =
+		url.searchParams.get('verified') === 'verified' ? 'verified' : 'all';
 	const owner: OwnerFilter = url.searchParams.get('owner') === 'mine' ? 'mine' : 'all';
 	const offset = Math.max(0, Math.trunc(Number(url.searchParams.get('offset')) || 0));
 	const contributorSlug = commons.contributorSlug ?? null;

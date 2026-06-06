@@ -19,10 +19,7 @@
  */
 
 import { env } from '$env/dynamic/private';
-import {
-	createCommonsClient as sdkCreate,
-	type paths,
-} from 'neighborhood-commons';
+import { createCommonsClient as sdkCreate, type paths } from 'neighborhood-commons';
 import type { Client } from 'openapi-fetch';
 
 /** The SDK default — matches what the unconfigured SDK uses internally. */

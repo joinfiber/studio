@@ -63,7 +63,10 @@
 <style>
 	:global(body) {
 		margin: 0;
-		font-family: system-ui, -apple-system, sans-serif;
+		font-family:
+			system-ui,
+			-apple-system,
+			sans-serif;
 		color: #222;
 		background: #fafafa;
 	}

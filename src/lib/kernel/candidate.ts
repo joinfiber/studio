@@ -27,7 +27,7 @@ export interface CandidateBase {
 	id: string;
 	kind: CandidateKind;
 	status: CandidateStatus;
-	source_tool: string;        // which tool produced this (folder name in lib/tools or lib/operator)
+	source_tool: string; // which tool produced this (folder name in lib/tools or lib/operator)
 	source_uri?: string | null; // original source if applicable (URL, file path, etc.)
 	created_at: string;
 	reviewed_at?: string | null;
@@ -49,10 +49,10 @@ export interface EventCandidate extends CandidateBase {
 	kind: 'event';
 	data: {
 		name: string;
-		start: string;             // ISO 8601 with offset
-		timezone: string;          // IANA
+		start: string; // ISO 8601 with offset
+		timezone: string; // IANA
 		end?: string | null;
-		category: string;          // kebab-case slug from Commons taxonomy
+		category: string; // kebab-case slug from Commons taxonomy
 		description?: string | null;
 		location: {
 			name: string;

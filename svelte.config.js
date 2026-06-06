@@ -6,9 +6,9 @@ const config = {
 	preprocess: vitePreprocess(),
 	kit: {
 		adapter: adapter({
-			envPrefix: ''
-		})
-	}
+			envPrefix: '',
+		}),
+	},
 };
 
 export default config;

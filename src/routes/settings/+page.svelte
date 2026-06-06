@@ -108,14 +108,12 @@
 		</p>
 	{:else if !data.commonsConfigured}
 		<p class="placeholder">
-			Configure <code>COMMONS_SERVICE_KEY</code> in <code>.env</code> to load your contributor
-			profile.
+			Configure <code>COMMONS_SERVICE_KEY</code> in <code>.env</code> to load your contributor profile.
 		</p>
 	{:else if !data.contributorSlug}
 		<p class="placeholder">
-			Set <code>COMMONS_CONTRIBUTOR_SLUG</code> in <code>.env</code> to identify this
-			instance's contributor profile. The slug is the lowercase-with-hyphens identifier from
-			the
+			Set <code>COMMONS_CONTRIBUTOR_SLUG</code> in <code>.env</code> to identify this instance's
+			contributor profile. The slug is the lowercase-with-hyphens identifier from the
 			<a
 				href="https://neighborhood-commons.org/developers/dashboard"
 				target="_blank"
@@ -134,8 +132,8 @@
 	</div>
 	{#if data.consumers.length === 0}
 		<p class="placeholder">
-			No apps consume from this instance yet. As your contributor profile becomes known,
-			consuming apps will appear here.
+			No apps consume from this instance yet. As your contributor profile becomes known, consuming
+			apps will appear here.
 		</p>
 	{:else}
 		<ul class="consumers">
@@ -158,8 +156,8 @@
 			{/each}
 		</ul>
 		<p class="footnote">
-			Mock data. Live counts require a Commons endpoint exposing consuming apps per
-			contributor — not yet built.
+			Mock data. Live counts require a Commons endpoint exposing consuming apps per contributor —
+			not yet built.
 		</p>
 	{/if}
 </section>

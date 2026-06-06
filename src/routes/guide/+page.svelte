@@ -6,8 +6,8 @@
 <header class="page-head">
 	<h2>Guide</h2>
 	<p class="sub">
-		How Studio works and how to extend it. These pages render straight from the repo docs — edit
-		the markdown and they update here too.
+		How Studio works and how to extend it. These pages render straight from the repo docs — edit the
+		markdown and they update here too.
 	</p>
 </header>
 
@@ -50,7 +50,10 @@
 		padding: 1.1rem 1.25rem;
 		text-decoration: none;
 		color: inherit;
-		transition: border-color 100ms ease, box-shadow 100ms ease, transform 100ms ease;
+		transition:
+			border-color 100ms ease,
+			box-shadow 100ms ease,
+			transform 100ms ease;
 	}
 	.guide:hover {
 		border-color: #166534;

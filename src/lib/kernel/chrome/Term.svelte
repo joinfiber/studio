@@ -30,7 +30,9 @@
 		<span class="pop-term">{concept.term}</span>
 		<span class="pop-def">{concept.definition}</span>
 		{#if concept.doc}
-			<a class="pop-doc" href={concept.doc} target="_blank" rel="noopener noreferrer">Learn more ↗</a>
+			<a class="pop-doc" href={concept.doc} target="_blank" rel="noopener noreferrer"
+				>Learn more ↗</a
+			>
 		{/if}
 	</span>
 </button>
@@ -74,7 +76,9 @@
 		opacity: 0;
 		transform: translateY(-3px);
 		pointer-events: none;
-		transition: opacity 120ms ease, transform 120ms ease;
+		transition:
+			opacity 120ms ease,
+			transform 120ms ease;
 	}
 	/* Transparent bridge over the gap so moving the cursor from the term down
 	   to the popover doesn't pass through a non-hovered dead zone. */

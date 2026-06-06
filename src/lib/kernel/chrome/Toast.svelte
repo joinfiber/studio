@@ -39,7 +39,13 @@
 		max-width: 360px;
 		pointer-events: auto;
 	}
-	.toast.success { background: #166534; }
-	.toast.error   { background: #991b1b; }
-	.toast.info    { background: #1e3a8a; }
+	.toast.success {
+		background: #166534;
+	}
+	.toast.error {
+		background: #991b1b;
+	}
+	.toast.info {
+		background: #1e3a8a;
+	}
 </style>

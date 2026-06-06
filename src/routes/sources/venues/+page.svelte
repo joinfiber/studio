@@ -57,9 +57,9 @@
 <header class="head">
 	<h2>Import venues from an area</h2>
 	<p class="sub">
-		Pull venues in a neighborhood, city, or ZIP from <Term id="venue">OpenStreetMap</Term> and
-		publish them as <Term id="organizer">organizations</Term> (each linked to its place). Builds the
-		venue spine that events attach to. Address, website, phone, and socials come along from OSM.
+		Pull venues in a neighborhood, city, or ZIP from <Term id="venue">OpenStreetMap</Term> and publish
+		them as <Term id="organizer">organizations</Term> (each linked to its place). Builds the venue spine
+		that events attach to. Address, website, phone, and socials come along from OSM.
 	</p>
 </header>
 
@@ -90,7 +90,9 @@
 		placeholder="Fishtown, Philadelphia  ·  or a ZIP like 19125"
 		required
 	/>
-	<button type="submit" class="primary" disabled={finding}>{finding ? 'Searching…' : 'Find venues'}</button>
+	<button type="submit" class="primary" disabled={finding}
+		>{finding ? 'Searching…' : 'Find venues'}</button
+	>
 	<div class="cats">
 		{#each data.groups as g}
 			<label class="cat" title={g.hint}>
@@ -114,7 +116,9 @@
 	</div>
 
 	{#if !data.configured}
-		<div class="gate">Set <code>COMMONS_SERVICE_KEY</code> to publish. You can preview the results below.</div>
+		<div class="gate">
+			Set <code>COMMONS_SERVICE_KEY</code> to publish. You can preview the results below.
+		</div>
 	{/if}
 
 	<ul class="list">
@@ -129,10 +133,14 @@
 						<span class="cat-tag">{v.category}</span>
 					</div>
 					<div class="line2">
-						{#if fmtAddr(v.address)}<span class="addr">{fmtAddr(v.address)}</span>{:else}<span class="addr muted">no address</span>{/if}
+						{#if fmtAddr(v.address)}<span class="addr">{fmtAddr(v.address)}</span>{:else}<span
+								class="addr muted">no address</span
+							>{/if}
 						{#if v.website}<span class="dot">·</span><span class="link-flag">web</span>{/if}
 						{#if v.phone}<span class="dot">·</span><span class="link-flag">tel</span>{/if}
-						{#if v.sameAs.length}<span class="dot">·</span><span class="link-flag">{v.sameAs.length} social</span>{/if}
+						{#if v.sameAs.length}<span class="dot">·</span><span class="link-flag"
+								>{v.sameAs.length} social</span
+							>{/if}
 					</div>
 				</div>
 			</li>

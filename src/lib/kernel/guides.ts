@@ -36,7 +36,10 @@ function descriptionOf(md: string): string {
 	for (const line of md.split('\n')) {
 		const t = line.trim();
 		if (!t || t.startsWith('#')) continue;
-		return t.replace(/[*_`[\]]/g, '').replace(/\(https?:\/\/[^)]+\)/g, '').slice(0, 180);
+		return t
+			.replace(/[*_`[\]]/g, '')
+			.replace(/\(https?:\/\/[^)]+\)/g, '')
+			.slice(0, 180);
 	}
 	return '';
 }

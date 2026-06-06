@@ -42,11 +42,7 @@ function unfold(raw: string): string[] {
 }
 
 function unescapeText(v: string): string {
-	return v
-		.replace(/\\n/gi, '\n')
-		.replace(/\\,/g, ',')
-		.replace(/\\;/g, ';')
-		.replace(/\\\\/g, '\\');
+	return v.replace(/\\n/gi, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\');
 }
 
 interface PropLine {

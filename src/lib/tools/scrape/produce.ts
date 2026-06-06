@@ -36,7 +36,10 @@ export function htmlToText(html: string): string {
 		.trim();
 }
 
-export async function scrapeAndExtract(rawUrl: string, timezone: string): Promise<EventCandidate[]> {
+export async function scrapeAndExtract(
+	rawUrl: string,
+	timezone: string,
+): Promise<EventCandidate[]> {
 	const url = assertSafeUrl(rawUrl).toString();
 	const res = await safeFetch(url, {
 		headers: {

@@ -46,12 +46,20 @@ export async function createVenue(
 		return { error: 'Name is required and must be ≤200 characters.' };
 	}
 	if (
-		!Number.isFinite(v.lat) || v.lat < -90 || v.lat > 90 ||
-		!Number.isFinite(v.lng) || v.lng < -180 || v.lng > 180
+		!Number.isFinite(v.lat) ||
+		v.lat < -90 ||
+		v.lat > 90 ||
+		!Number.isFinite(v.lng) ||
+		v.lng < -180 ||
+		v.lng > 180
 	) {
 		return { error: 'Coordinates are out of range.' };
 	}
-	if ((v.sameAs?.length ?? 0) > 25 || (v.tags?.length ?? 0) > 25 || (v.openingHours?.length ?? 0) > 60) {
+	if (
+		(v.sameAs?.length ?? 0) > 25 ||
+		(v.tags?.length ?? 0) > 25 ||
+		(v.openingHours?.length ?? 0) > 60
+	) {
 		return { error: 'Too many social links, tags, or hours entries.' };
 	}
 
@@ -81,7 +89,9 @@ export async function createVenue(
 		} as PlaceInput,
 	});
 	if (!place.data) {
-		return { error: place.error?.error?.message ?? `place create returned ${place.response.status}` };
+		return {
+			error: place.error?.error?.message ?? `place create returned ${place.response.status}`,
+		};
 	}
 	const placeId = place.data.place.id;
 
@@ -104,7 +114,10 @@ export async function createVenue(
 	if (!org.data) {
 		const status = org.response.status;
 		return {
-			error: status === 409 ? 'already exists' : org.error?.error?.message ?? `org create returned ${status}`,
+			error:
+				status === 409
+					? 'already exists'
+					: (org.error?.error?.message ?? `org create returned ${status}`),
 		};
 	}
 	return { orgId: org.data.organization.id, placeId };

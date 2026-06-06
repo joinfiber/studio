@@ -163,7 +163,9 @@
 	}
 	function fmtAddr(a?: Record<string, string | undefined> | null): string {
 		return a
-			? [a.streetAddress, a.addressLocality, a.addressRegion, a.postalCode].filter(Boolean).join(', ')
+			? [a.streetAddress, a.addressLocality, a.addressRegion, a.postalCode]
+					.filter(Boolean)
+					.join(', ')
 			: '';
 	}
 
@@ -293,7 +295,10 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ name: subjName, lat: subjLat, lng: subjLng }),
 			});
-			const r = (await res.json().catch(() => ({}))) as { details?: GoogleDetails | null; error?: string };
+			const r = (await res.json().catch(() => ({}))) as {
+				details?: GoogleDetails | null;
+				error?: string;
+			};
 			if (gen !== panelGen) return; // panel changed — don't land this in another venue
 			if (!res.ok) {
 				toast.push(String(r.error ?? 'Google lookup failed.'), 'error');
@@ -301,7 +306,8 @@
 				google = r.details ?? null;
 			}
 		} catch (e) {
-			if (gen === panelGen) toast.push(e instanceof Error ? e.message : 'Google lookup failed.', 'error');
+			if (gen === panelGen)
+				toast.push(e instanceof Error ? e.message : 'Google lookup failed.', 'error');
 		} finally {
 			if (gen === panelGen) {
 				googleLoading = false;
@@ -325,7 +331,8 @@
 			let bestScore = Infinity;
 			for (const vn of r.venues ?? []) {
 				const dist = Math.hypot(vn.lat - lat, vn.lng - lng);
-				const nameMatch = vn.name.toLowerCase().includes(target) || target.includes(vn.name.toLowerCase());
+				const nameMatch =
+					vn.name.toLowerCase().includes(target) || target.includes(vn.name.toLowerCase());
 				const score = dist - (nameMatch ? 0.002 : 0); // lightly prefer a name match
 				if (score < bestScore) {
 					bestScore = score;
@@ -348,7 +355,11 @@
 		const raw = osmRef?.openingHoursRaw;
 		const parsed = raw ? parseOsmHours(raw) : null;
 		if (!parsed) {
-			toast.push(raw ? 'Couldn’t read OSM hours — enter by hand.' : 'No OSM hours for this venue.', 'info', 2500);
+			toast.push(
+				raw ? 'Couldn’t read OSM hours — enter by hand.' : 'No OSM hours for this venue.',
+				'info',
+				2500,
+			);
 			return;
 		}
 		week = parsed;
@@ -399,8 +410,14 @@
 			address: v.address,
 			website: d.website.trim() || undefined,
 			phone: d.phone.trim() || undefined,
-			sameAs: d.sameAs.split(',').map((s) => s.trim()).filter(Boolean),
-			tags: d.tags.split(',').map((s) => s.trim()).filter(Boolean),
+			sameAs: d.sameAs
+				.split(',')
+				.map((s) => s.trim())
+				.filter(Boolean),
+			tags: d.tags
+				.split(',')
+				.map((s) => s.trim())
+				.filter(Boolean),
 			category: v.category, // OSM category — a server-side tag fallback if tags is empty
 			openingHours: hasAnyHours(week) ? weekToSpec(week) : undefined,
 			osmType: v.osmType,
@@ -469,10 +486,21 @@
 			if (d.website !== o.website) patch.url = d.website.trim() || null;
 			if (d.phone !== o.phone) patch.telephone = d.phone.trim() || null;
 			if (d.description !== o.description) patch.description = d.description.trim() || null;
-			if (d.sameAs !== o.sameAs) patch.sameAs = d.sameAs.split(',').map((s) => s.trim()).filter(Boolean);
-			if (d.tags !== o.tags) patch.tags = d.tags.split(',').map((s) => s.trim()).filter(Boolean);
+			if (d.sameAs !== o.sameAs)
+				patch.sameAs = d.sameAs
+					.split(',')
+					.map((s) => s.trim())
+					.filter(Boolean);
+			if (d.tags !== o.tags)
+				patch.tags = d.tags
+					.split(',')
+					.map((s) => s.trim())
+					.filter(Boolean);
 			const newSpec = weekToSpec(week);
-			if (JSON.stringify(newSpec) !== JSON.stringify(weekToSpec(weekFromSpec(e.openingHoursSpecification)))) {
+			if (
+				JSON.stringify(newSpec) !==
+				JSON.stringify(weekToSpec(weekFromSpec(e.openingHoursSpecification)))
+			) {
 				patch.openingHoursSpecification = newSpec;
 			}
 
@@ -494,7 +522,10 @@
 			if (reviewed) {
 				toast.push(edited ? 'Saved & marked reviewed' : 'Marked reviewed', 'success');
 			} else {
-				toast.push(edited ? 'Saved, but couldn’t mark reviewed' : 'Couldn’t mark reviewed', 'error');
+				toast.push(
+					edited ? 'Saved, but couldn’t mark reviewed' : 'Couldn’t mark reviewed',
+					'error',
+				);
 			}
 			closePanel();
 		} catch (err) {
@@ -586,8 +617,14 @@
 
 			map.on('load', () => {
 				if (!map) return;
-				map.addSource('osm', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-				map.addSource('orgs', { type: 'geojson', data: { type: 'FeatureCollection', features: orgFeatures } });
+				map.addSource('osm', {
+					type: 'geojson',
+					data: { type: 'FeatureCollection', features: [] },
+				});
+				map.addSource('orgs', {
+					type: 'geojson',
+					data: { type: 'FeatureCollection', features: orgFeatures },
+				});
 				map.addLayer({
 					id: 'osm-dots',
 					type: 'circle',
@@ -669,7 +706,8 @@
 	<h2>Map</h2>
 	{#if data.live && data.mapReady}
 		<span class="total">
-			{data.points.length} in Commons · {claimedCount} claimed{#if loadedCount > 0} · {loadedCount} on OSM{/if}
+			{data.points.length} in Commons · {claimedCount} claimed{#if loadedCount > 0}
+				· {loadedCount} on OSM{/if}
 		</span>
 	{/if}
 </header>
@@ -682,8 +720,8 @@
 {:else if !data.mapReady}
 	<div class="gate">
 		<p class="gate-intro">
-			The map needs a basemap. Add a free MapTiler key to turn it on — the venue data comes from
-			the Commons regardless.
+			The map needs a basemap. Add a free MapTiler key to turn it on — the venue data comes from the
+			Commons regardless.
 		</p>
 		{#if data.capability}<CapabilityGuide capability={data.capability} />{/if}
 	</div>
@@ -694,12 +732,19 @@
 	<div class="map-controls">
 		<div class="seg" role="group" aria-label="Filter venues by review state">
 			<button class:active={filter === 'all'} onclick={() => applyFilter('all')}>All</button>
-			<button class:active={filter === 'needs'} onclick={() => applyFilter('needs')}>Needs review</button>
-			<button class:active={filter === 'reviewed'} onclick={() => applyFilter('reviewed')}>Reviewed</button>
+			<button class:active={filter === 'needs'} onclick={() => applyFilter('needs')}
+				>Needs review</button
+			>
+			<button class:active={filter === 'reviewed'} onclick={() => applyFilter('reviewed')}
+				>Reviewed</button
+			>
 		</div>
 		<span class="rev-count">{reviewedCount} reviewed</span>
 		{#if data.reviewWarning}
-			<span class="rev-warn" title="Set STUDIO_DATABASE_URL to a persistent volume so review progress survives restarts.">
+			<span
+				class="rev-warn"
+				title="Set STUDIO_DATABASE_URL to a persistent volume so review progress survives restarts."
+			>
 				⚠ {data.reviewWarning}
 			</span>
 		{/if}
@@ -728,7 +773,8 @@
 						<div class="panel-name">{subjName}</div>
 						{#if isEdit}
 							<div class="panel-cat">
-								in the Commons{#if editing?.verified} · claimed{/if}
+								in the Commons{#if editing?.verified}
+									· claimed{/if}
 								{#if editing?.reviewed}<span class="rev-badge">✓ reviewed</span>{/if}
 							</div>
 						{:else}
@@ -741,180 +787,319 @@
 				{#if editLoading}<div class="panel-loading">Loading venue…</div>{/if}
 
 				{#if !editLoading}
-				{#if osmRef}
-					{@const s = osmRef}
-					<div class="ref">
-						<div class="ref-title">{isEdit ? 'Nearest OSM match' : 'Reference (OpenStreetMap)'}</div>
-						{#if isEdit}<div class="ref-sub">{s.name}</div>{/if}
-						{#if addr}
-							<div class="ref-row"><span class="ref-val">{addr}</span><button class="copy" onclick={() => copy(addr)}>copy</button></div>
-						{/if}
-						{#if s.website}
-							{@const web = s.website}
-							<div class="ref-row"><a class="ref-val" href={web} target="_blank" rel="noopener noreferrer">{web}</a><button class="copy" onclick={() => copy(web)}>copy</button><button class="use" onclick={() => useGoogle('website', web)}>use</button></div>
-						{/if}
-						{#if s.phone}
-							{@const tel = s.phone}
-							<div class="ref-row"><span class="ref-val">{tel}</span><button class="copy" onclick={() => copy(tel)}>copy</button><button class="use" onclick={() => useGoogle('phone', tel)}>use</button></div>
-						{/if}
-						{#each s.sameAs ?? [] as so}
-							<div class="ref-row"><a class="ref-val" href={so} target="_blank" rel="noopener noreferrer">{so}</a><button class="copy" onclick={() => copy(so)}>copy</button></div>
-						{/each}
-						{#if !isEdit}
-							<a class="gsearch" href={`https://www.google.com/search?q=${gq}`} target="_blank" rel="noopener noreferrer">Search Google ↗</a>
-						{/if}
-					</div>
-				{:else if isEdit}
-					<div class="gcompare">
-						{#if !osmRefTried}
-							<button class="compare-btn" onclick={loadOsmMatch} disabled={osmRefLoading}>
-								{osmRefLoading ? 'Checking OSM…' : 'Compare with OSM'}
-							</button>
-						{:else}
-							<div class="gnone">No OSM match nearby.</div>
-						{/if}
-					</div>
-				{/if}
-
-				{#if data.googleReady}
-					<div class="gcompare">
-						{#if !googleTried}
-							<button class="compare-btn" onclick={loadGoogle} disabled={googleLoading}>
-								{googleLoading ? 'Checking Google…' : isEdit ? 'Refresh from Google' : 'Compare with Google'}
-							</button>
-						{:else if google}
-							{@const g = google}
-							<div class="ref google">
-								<div class="ref-title">Google <span class="ref-note">reference only · not stored</span></div>
-								{#if g.name}
-									<div class="ref-row"><span class="ref-val">{g.name}</span><button class="use" onclick={() => useGoogle('name', g.name)}>use</button></div>
-								{/if}
-								{#if g.address}
-									<div class="ref-row"><span class="ref-val">{g.address}</span><button class="copy" onclick={() => copy(g.address ?? '')}>copy</button></div>
-								{/if}
-								{#if g.website}
-									{@const gw = g.website}
-									<div class="ref-row"><a class="ref-val" href={gw} target="_blank" rel="noopener noreferrer">{gw}</a><button class="use" onclick={() => useGoogle('website', gw)}>use</button></div>
-								{/if}
-								{#if g.phone}
-									{@const gp = g.phone}
-									<div class="ref-row"><span class="ref-val">{gp}</span><button class="use" onclick={() => useGoogle('phone', gp)}>use</button></div>
-								{/if}
-								{#if g.hoursText.length}
-									<div class="ghours">
-										<div class="ghours-head">
-											<span>Hours</span>
-											{#if g.hoursPeriods.length}<button class="use" onclick={fillHoursFromGoogle}>use</button>{/if}
-										</div>
-										{#each g.hoursText as line}<div class="ghours-line">{line}</div>{/each}
-									</div>
-								{/if}
-								{#if g.googleMapsUri}
-									{@const gm = g.googleMapsUri}
-									<a class="gsearch" href={gm} target="_blank" rel="noopener noreferrer">Open in Google Maps ↗</a>
-								{/if}
+					{#if osmRef}
+						{@const s = osmRef}
+						<div class="ref">
+							<div class="ref-title">
+								{isEdit ? 'Nearest OSM match' : 'Reference (OpenStreetMap)'}
 							</div>
-						{:else}
-							<div class="gnone">No Google match. <a class="gsearch" href={`https://www.google.com/search?q=${gq}`} target="_blank" rel="noopener noreferrer">Search ↗</a></div>
-						{/if}
-					</div>
-				{/if}
-
-				<div class="form">
-					<div class="form-title">{isEdit ? 'Edit venue' : 'Curate & add'}</div>
-					<label class="f"><span>Name</span><input type="text" bind:value={draft.name} /></label>
-					<label class="f"><span>Website</span><input type="text" bind:value={draft.website} /></label>
-					<label class="f"><span>Phone</span><input type="text" bind:value={draft.phone} /></label>
-					{#if isEdit}
-						<label class="f"><span>Description</span><textarea rows="2" bind:value={draft.description}></textarea></label>
-					{/if}
-					<label class="f"><span>Social links <em>(comma-separated)</em></span><input type="text" bind:value={draft.sameAs} /></label>
-					<label class="f"><span>Tags <em>(comma-separated)</em></span><input type="text" bind:value={draft.tags} /></label>
-				</div>
-
-				<div class="hours">
-					<div class="hours-head">
-						<span class="form-title">Hours</span>
-						<div class="hours-fill">
-							{#if osmRef?.openingHoursRaw}<button class="mini" onclick={fillHoursFromOsm}>from OSM</button>{/if}
-							{#if google?.hoursPeriods.length}<button class="mini" onclick={fillHoursFromGoogle}>from Google</button>{/if}
-							<button class="mini" onclick={() => (hoursOpen = !hoursOpen)}>{hoursOpen ? 'hide' : 'edit'}</button>
-						</div>
-					</div>
-					{#if hoursOpen}
-						<div class="hours-grid">
-							{#each week as day, i}
-								<div class="hrow" class:off={day.closed}>
-									<span class="hday">{DAYS[i].slice(0, 3)}</span>
-									{#if day.closed}
-										<span class="hclosed-label">closed</span>
-									{:else}
-										<input class="htime" type="text" inputmode="numeric" bind:value={week[i].open} placeholder="09:00" />
-										<span class="hdash">–</span>
-										<input class="htime" type="text" inputmode="numeric" bind:value={week[i].close} placeholder="17:00" />
-										{#if isOvernight(day)}<span class="overnight" title="Closes after midnight (next day)">+1d</span>{/if}
-									{/if}
-									<label class="hcheck" title="Closed this day"><input type="checkbox" bind:checked={week[i].closed} /></label>
+							{#if isEdit}<div class="ref-sub">{s.name}</div>{/if}
+							{#if addr}
+								<div class="ref-row">
+									<span class="ref-val">{addr}</span><button class="copy" onclick={() => copy(addr)}
+										>copy</button
+									>
+								</div>
+							{/if}
+							{#if s.website}
+								{@const web = s.website}
+								<div class="ref-row">
+									<a class="ref-val" href={web} target="_blank" rel="noopener noreferrer">{web}</a
+									><button class="copy" onclick={() => copy(web)}>copy</button><button
+										class="use"
+										onclick={() => useGoogle('website', web)}>use</button
+									>
+								</div>
+							{/if}
+							{#if s.phone}
+								{@const tel = s.phone}
+								<div class="ref-row">
+									<span class="ref-val">{tel}</span><button class="copy" onclick={() => copy(tel)}
+										>copy</button
+									><button class="use" onclick={() => useGoogle('phone', tel)}>use</button>
+								</div>
+							{/if}
+							{#each s.sameAs ?? [] as so}
+								<div class="ref-row">
+									<a class="ref-val" href={so} target="_blank" rel="noopener noreferrer">{so}</a
+									><button class="copy" onclick={() => copy(so)}>copy</button>
 								</div>
 							{/each}
-							<div class="hours-quick">
-								<button class="mini" onclick={spreadWeekdays}>Mon → weekdays</button>
-								<button class="mini" onclick={spreadAll}>Mon → all</button>
+							{#if !isEdit}
+								<a
+									class="gsearch"
+									href={`https://www.google.com/search?q=${gq}`}
+									target="_blank"
+									rel="noopener noreferrer">Search Google ↗</a
+								>
+							{/if}
+						</div>
+					{:else if isEdit}
+						<div class="gcompare">
+							{#if !osmRefTried}
+								<button class="compare-btn" onclick={loadOsmMatch} disabled={osmRefLoading}>
+									{osmRefLoading ? 'Checking OSM…' : 'Compare with OSM'}
+								</button>
+							{:else}
+								<div class="gnone">No OSM match nearby.</div>
+							{/if}
+						</div>
+					{/if}
+
+					{#if data.googleReady}
+						<div class="gcompare">
+							{#if !googleTried}
+								<button class="compare-btn" onclick={loadGoogle} disabled={googleLoading}>
+									{googleLoading
+										? 'Checking Google…'
+										: isEdit
+											? 'Refresh from Google'
+											: 'Compare with Google'}
+								</button>
+							{:else if google}
+								{@const g = google}
+								<div class="ref google">
+									<div class="ref-title">
+										Google <span class="ref-note">reference only · not stored</span>
+									</div>
+									{#if g.name}
+										<div class="ref-row">
+											<span class="ref-val">{g.name}</span><button
+												class="use"
+												onclick={() => useGoogle('name', g.name)}>use</button
+											>
+										</div>
+									{/if}
+									{#if g.address}
+										<div class="ref-row">
+											<span class="ref-val">{g.address}</span><button
+												class="copy"
+												onclick={() => copy(g.address ?? '')}>copy</button
+											>
+										</div>
+									{/if}
+									{#if g.website}
+										{@const gw = g.website}
+										<div class="ref-row">
+											<a class="ref-val" href={gw} target="_blank" rel="noopener noreferrer">{gw}</a
+											><button class="use" onclick={() => useGoogle('website', gw)}>use</button>
+										</div>
+									{/if}
+									{#if g.phone}
+										{@const gp = g.phone}
+										<div class="ref-row">
+											<span class="ref-val">{gp}</span><button
+												class="use"
+												onclick={() => useGoogle('phone', gp)}>use</button
+											>
+										</div>
+									{/if}
+									{#if g.hoursText.length}
+										<div class="ghours">
+											<div class="ghours-head">
+												<span>Hours</span>
+												{#if g.hoursPeriods.length}<button class="use" onclick={fillHoursFromGoogle}
+														>use</button
+													>{/if}
+											</div>
+											{#each g.hoursText as line}<div class="ghours-line">{line}</div>{/each}
+										</div>
+									{/if}
+									{#if g.googleMapsUri}
+										{@const gm = g.googleMapsUri}
+										<a class="gsearch" href={gm} target="_blank" rel="noopener noreferrer"
+											>Open in Google Maps ↗</a
+										>
+									{/if}
+								</div>
+							{:else}
+								<div class="gnone">
+									No Google match. <a
+										class="gsearch"
+										href={`https://www.google.com/search?q=${gq}`}
+										target="_blank"
+										rel="noopener noreferrer">Search ↗</a
+									>
+								</div>
+							{/if}
+						</div>
+					{/if}
+
+					<div class="form">
+						<div class="form-title">{isEdit ? 'Edit venue' : 'Curate & add'}</div>
+						<label class="f"><span>Name</span><input type="text" bind:value={draft.name} /></label>
+						<label class="f"
+							><span>Website</span><input type="text" bind:value={draft.website} /></label
+						>
+						<label class="f"><span>Phone</span><input type="text" bind:value={draft.phone} /></label
+						>
+						{#if isEdit}
+							<label class="f"
+								><span>Description</span><textarea rows="2" bind:value={draft.description}
+								></textarea></label
+							>
+						{/if}
+						<label class="f"
+							><span>Social links <em>(comma-separated)</em></span><input
+								type="text"
+								bind:value={draft.sameAs}
+							/></label
+						>
+						<label class="f"
+							><span>Tags <em>(comma-separated)</em></span><input
+								type="text"
+								bind:value={draft.tags}
+							/></label
+						>
+					</div>
+
+					<div class="hours">
+						<div class="hours-head">
+							<span class="form-title">Hours</span>
+							<div class="hours-fill">
+								{#if osmRef?.openingHoursRaw}<button class="mini" onclick={fillHoursFromOsm}
+										>from OSM</button
+									>{/if}
+								{#if google?.hoursPeriods.length}<button class="mini" onclick={fillHoursFromGoogle}
+										>from Google</button
+									>{/if}
+								<button class="mini" onclick={() => (hoursOpen = !hoursOpen)}
+									>{hoursOpen ? 'hide' : 'edit'}</button
+								>
 							</div>
 						</div>
-					{:else if hasAnyHours(week)}
-						<div class="hours-summary">{hoursSetCount(week)} day{hoursSetCount(week) === 1 ? '' : 's'} set</div>
-					{/if}
-				</div>
+						{#if hoursOpen}
+							<div class="hours-grid">
+								{#each week as day, i}
+									<div class="hrow" class:off={day.closed}>
+										<span class="hday">{DAYS[i].slice(0, 3)}</span>
+										{#if day.closed}
+											<span class="hclosed-label">closed</span>
+										{:else}
+											<input
+												class="htime"
+												type="text"
+												inputmode="numeric"
+												bind:value={week[i].open}
+												placeholder="09:00"
+											/>
+											<span class="hdash">–</span>
+											<input
+												class="htime"
+												type="text"
+												inputmode="numeric"
+												bind:value={week[i].close}
+												placeholder="17:00"
+											/>
+											{#if isOvernight(day)}<span
+													class="overnight"
+													title="Closes after midnight (next day)">+1d</span
+												>{/if}
+										{/if}
+										<label class="hcheck" title="Closed this day"
+											><input type="checkbox" bind:checked={week[i].closed} /></label
+										>
+									</div>
+								{/each}
+								<div class="hours-quick">
+									<button class="mini" onclick={spreadWeekdays}>Mon → weekdays</button>
+									<button class="mini" onclick={spreadAll}>Mon → all</button>
+								</div>
+							</div>
+						{:else if hasAnyHours(week)}
+							<div class="hours-summary">
+								{hoursSetCount(week)} day{hoursSetCount(week) === 1 ? '' : 's'} set
+							</div>
+						{/if}
+					</div>
 
-				<div class="ids">
-					<div class="form-title">Place</div>
+					<div class="ids">
+						<div class="form-title">Place</div>
+						{#if isEdit}
+							{@const pa = fmtAddr(editMeta?.address)}
+							{#if pa}
+								<div class="addr">{pa}</div>
+							{:else if editMeta}
+								<div class="id-none">No address on this place.</div>
+							{/if}
+							<div class="id-row">
+								<span class="id-k">place</span><code class="id-v">{editMeta?.placeId ?? '—'}</code
+								>{#if editMeta?.placeId}<button
+										class="copy"
+										onclick={() => copy(editMeta?.placeId ?? '')}>copy</button
+									>{/if}
+							</div>
+							<div class="id-row">
+								<span class="id-k">org</span><code class="id-v">{editing?.id}</code><button
+									class="copy"
+									onclick={() => copy(editing?.id ?? '')}>copy</button
+								>
+							</div>
+							{#each editMeta?.identifiers ?? [] as id}
+								<div class="id-row">
+									<span class="id-k">{id.propertyID}</span><code class="id-v">{id.value}</code
+									><button class="copy" onclick={() => copy(id.value)}>copy</button>
+								</div>
+							{/each}
+							{#if editMeta && !editMeta.identifiers.length}
+								<div class="id-row">
+									<span class="id-k">external id</span><span class="id-missing">none</span>
+								</div>
+							{/if}
+							{#if google?.placeId}
+								<div class="id-row">
+									<span class="id-k">google now</span><code class="id-v">{google.placeId}</code>
+								</div>
+							{/if}
+							<div class="id-note">
+								Address &amp; identity live on the <strong>Place</strong> — read-only here (the
+								Commons has no place update yet). Name, contact, socials &amp; hours above are the
+								editable <strong>Organization</strong>.
+							</div>
+						{:else if selected}
+							{@const pa = fmtAddr(selected.address)}
+							{#if pa}<div class="addr">{pa}</div>{/if}
+							<div class="id-row">
+								<span class="id-k">osm</span><code class="id-v"
+									>{selected.osmType}/{selected.osmId}</code
+								>
+							</div>
+							{#if google?.placeId}
+								<div class="id-row">
+									<span class="id-k">googlePlaceId</span><code class="id-v">{google.placeId}</code>
+								</div>
+							{/if}
+							<div class="id-note">
+								This address + external ID are committed to the new <strong>Place</strong> on add (Google
+								place_id if found, else the OSM ref).
+							</div>
+						{/if}
+					</div>
+
 					{#if isEdit}
-						{@const pa = fmtAddr(editMeta?.address)}
-						{#if pa}
-							<div class="addr">{pa}</div>
-						{:else if editMeta}
-							<div class="id-none">No address on this place.</div>
+						<div class="panel-actions">
+							<button class="primary" onclick={saveEdit} disabled={savingEdit}>
+								{savingEdit ? 'Saving…' : editDirty ? 'Save & mark reviewed' : 'Mark reviewed'}
+							</button>
+						</div>
+						{#if editing?.reviewed}
+							<button class="linklike" onclick={unreview}>Un-mark reviewed</button>
 						{/if}
-						<div class="id-row"><span class="id-k">place</span><code class="id-v">{editMeta?.placeId ?? '—'}</code>{#if editMeta?.placeId}<button class="copy" onclick={() => copy(editMeta?.placeId ?? '')}>copy</button>{/if}</div>
-						<div class="id-row"><span class="id-k">org</span><code class="id-v">{editing?.id}</code><button class="copy" onclick={() => copy(editing?.id ?? '')}>copy</button></div>
-						{#each editMeta?.identifiers ?? [] as id}
-							<div class="id-row"><span class="id-k">{id.propertyID}</span><code class="id-v">{id.value}</code><button class="copy" onclick={() => copy(id.value)}>copy</button></div>
-						{/each}
-						{#if editMeta && !editMeta.identifiers.length}
-							<div class="id-row"><span class="id-k">external id</span><span class="id-missing">none</span></div>
-						{/if}
-						{#if google?.placeId}
-							<div class="id-row"><span class="id-k">google now</span><code class="id-v">{google.placeId}</code></div>
-						{/if}
-						<div class="id-note">Address &amp; identity live on the <strong>Place</strong> — read-only here (the Commons has no place update yet). Name, contact, socials &amp; hours above are the editable <strong>Organization</strong>.</div>
-					{:else if selected}
-						{@const pa = fmtAddr(selected.address)}
-						{#if pa}<div class="addr">{pa}</div>{/if}
-						<div class="id-row"><span class="id-k">osm</span><code class="id-v">{selected.osmType}/{selected.osmId}</code></div>
-						{#if google?.placeId}
-							<div class="id-row"><span class="id-k">googlePlaceId</span><code class="id-v">{google.placeId}</code></div>
-						{/if}
-						<div class="id-note">This address + external ID are committed to the new <strong>Place</strong> on add (Google place_id if found, else the OSM ref).</div>
+						<p class="panel-note">
+							Saves edits to the Commons and records this venue as reviewed (Studio-local). Google
+							data is reference only — never stored.
+						</p>
+					{:else}
+						<div class="panel-actions">
+							<button class="primary" onclick={addSelected} disabled={adding}
+								>{adding ? 'Adding…' : 'Add to Commons'}</button
+							>
+						</div>
+						<p class="panel-note">
+							Adds as <strong>proxied</strong> — relayed from OSM. Google data is shown for reference
+							only and is never stored.
+						</p>
 					{/if}
-				</div>
-
-				{#if isEdit}
-					<div class="panel-actions">
-						<button class="primary" onclick={saveEdit} disabled={savingEdit}>
-							{savingEdit ? 'Saving…' : editDirty ? 'Save & mark reviewed' : 'Mark reviewed'}
-						</button>
-					</div>
-					{#if editing?.reviewed}
-						<button class="linklike" onclick={unreview}>Un-mark reviewed</button>
-					{/if}
-					<p class="panel-note">Saves edits to the Commons and records this venue as reviewed (Studio-local). Google data is reference only — never stored.</p>
-				{:else}
-					<div class="panel-actions">
-						<button class="primary" onclick={addSelected} disabled={adding}>{adding ? 'Adding…' : 'Add to Commons'}</button>
-					</div>
-					<p class="panel-note">Adds as <strong>proxied</strong> — relayed from OSM. Google data is shown for reference only and is never stored.</p>
-				{/if}
 				{/if}
 			</aside>
 		{/if}

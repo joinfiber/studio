@@ -51,15 +51,17 @@ function normalizeCategory(c: string | null | undefined): string | null {
 
 function parseContent(content: string): ExtractedEvent[] {
 	// Strip markdown code fences if the model wrapped the JSON.
-	const cleaned = content.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+	const cleaned = content
+		.replace(/^```(?:json)?/i, '')
+		.replace(/```$/i, '')
+		.trim();
 	let obj: unknown;
 	try {
 		obj = JSON.parse(cleaned);
 	} catch {
 		return [];
 	}
-	const raw =
-		(obj as { events?: unknown }).events ?? (Array.isArray(obj) ? obj : []);
+	const raw = (obj as { events?: unknown }).events ?? (Array.isArray(obj) ? obj : []);
 	if (!Array.isArray(raw)) return [];
 	return raw
 		.map((e): ExtractedEvent | null => {
@@ -72,9 +74,7 @@ function parseContent(content: string): ExtractedEvent[] {
 				time: typeof r.time === 'string' && r.time.trim() ? r.time.trim() : null,
 				venue: typeof r.venue === 'string' && r.venue.trim() ? r.venue.trim() : null,
 				description:
-					typeof r.description === 'string' && r.description.trim()
-						? r.description.trim()
-						: null,
+					typeof r.description === 'string' && r.description.trim() ? r.description.trim() : null,
 				category: normalizeCategory(typeof r.category === 'string' ? r.category : null),
 			};
 		})

@@ -36,7 +36,15 @@ describe('candidatesFromRows', () => {
 
 	it('maps a row to an event candidate with proxied provenance', () => {
 		const { candidates, skipped } = candidatesFromRows(
-			[{ Name: 'Open Mic', Date: '2026-05-21', Time: '7pm', Venue: 'Cafe Walnut', Category: 'open_mic' }],
+			[
+				{
+					Name: 'Open Mic',
+					Date: '2026-05-21',
+					Time: '7pm',
+					Venue: 'Cafe Walnut',
+					Category: 'open_mic',
+				},
+			],
 			mapping,
 			opts,
 		);

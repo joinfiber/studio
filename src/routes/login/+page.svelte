@@ -83,7 +83,9 @@
 		border: 1px solid #d0d0d0;
 		border-radius: 6px;
 		outline: none;
-		transition: border-color 100ms ease, box-shadow 100ms ease;
+		transition:
+			border-color 100ms ease,
+			box-shadow 100ms ease;
 	}
 	input:focus {
 		border-color: #166534;

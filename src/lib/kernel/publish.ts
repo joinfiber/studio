@@ -195,7 +195,8 @@ export async function publishBatch(
 	for (const candidate of candidates) {
 		const result = await publishEventCandidate(sdk, candidate, organizerOrgId);
 		if (result.ok) published += 1;
-		else failed.push({ name: candidate.data?.name ?? candidate.id, error: result.error ?? 'failed' });
+		else
+			failed.push({ name: candidate.data?.name ?? candidate.id, error: result.error ?? 'failed' });
 	}
 	return { published, failedCount: failed.length, failed: failed.slice(0, 10) };
 }

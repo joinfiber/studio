@@ -8,8 +8,8 @@
 <header class="page-head">
 	<h2>Sources</h2>
 	<p class="sub">
-		Bring event data into the <Term id="commons">Commons</Term>. Each method fetches, lets you
-		tidy the results, then publishes. Imports run on demand.
+		Bring event data into the <Term id="commons">Commons</Term>. Each method fetches, lets you tidy
+		the results, then publishes. Imports run on demand.
 	</p>
 </header>
 
@@ -48,7 +48,9 @@
 		<div class="method-title">
 			Scrape page <span class="tag">LLM</span>
 		</div>
-		<p class="method-desc">Fetch a listings page and extract events. Generic; custom adapters per site.</p>
+		<p class="method-desc">
+			Fetch a listings page and extract events. Generic; custom adapters per site.
+		</p>
 		{#if data.llmReady}
 			<span class="provenance">proxied</span>
 		{:else}
@@ -58,14 +60,13 @@
 
 	<a class="method" href="/sources/venues">
 		<div class="method-title">Venues</div>
-		<p class="method-desc">Bulk-import venues in an area from OpenStreetMap as organizations. Builds the venue spine.</p>
+		<p class="method-desc">
+			Bulk-import venues in an area from OpenStreetMap as organizations. Builds the venue spine.
+		</p>
 		<span class="provenance">organizations</span>
 	</a>
 
-	<a
-		class="method create"
-		href="/guide/extending"
-	>
+	<a class="method create" href="/guide/extending">
 		<div class="method-title"><span class="plus">+</span> Create new</div>
 		<p class="method-desc">
 			Build your own source. The guide walks through adding an ingestion tool — and contributing it
@@ -76,8 +77,9 @@
 </div>
 
 <p class="footer-note">
-	Each method publishes as <Term id="proxied">proxied</Term> — attributed to the source it relays from. Saved subscriptions with scheduled auto-fetch are coming. For now, each import runs when you
-	trigger it.
+	Each method publishes as <Term id="proxied">proxied</Term> — attributed to the source it relays from.
+	Saved subscriptions with scheduled auto-fetch are coming. For now, each import runs when you trigger
+	it.
 </p>
 
 <style>
@@ -110,7 +112,10 @@
 		padding: 1.1rem 1.25rem;
 		text-decoration: none;
 		color: inherit;
-		transition: border-color 100ms ease, box-shadow 100ms ease, transform 100ms ease;
+		transition:
+			border-color 100ms ease,
+			box-shadow 100ms ease,
+			transform 100ms ease;
 	}
 	.method:hover {
 		border-color: #166534;

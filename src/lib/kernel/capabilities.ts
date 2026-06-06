@@ -40,19 +40,22 @@ export function getCapabilities(): Capability[] {
 		{
 			id: 'commons',
 			label: 'Connect to the Commons',
-			unlocks: 'Read and publish neighborhood events to the shared Commons. Everything else builds on this.',
+			unlocks:
+				'Read and publish neighborhood events to the shared Commons. Everything else builds on this.',
 			prereqs: [
 				{
 					env: 'COMMONS_SERVICE_KEY',
 					label: 'Commons API key',
 					met: present('COMMONS_SERVICE_KEY'),
-					howto: 'Register a free key at neighborhood-commons.org/developers. Studio ships none — bring your own.',
+					howto:
+						'Register a free key at neighborhood-commons.org/developers. Studio ships none — bring your own.',
 				},
 				{
 					env: 'COMMONS_CONTRIBUTOR_SLUG',
 					label: 'Contributor handle',
 					met: present('COMMONS_CONTRIBUTOR_SLUG'),
-					howto: 'Your handle from the developer dashboard. Lets readers see “via you” and shows your profile card.',
+					howto:
+						'Your handle from the developer dashboard. Lets readers see “via you” and shows your profile card.',
 					optional: true,
 				},
 			],
@@ -60,7 +63,8 @@ export function getCapabilities(): Capability[] {
 		{
 			id: 'access',
 			label: 'Lock down access',
-			unlocks: 'Require a password (and optional 2-factor) so only you can use this deployment. Essential once it’s on a public URL.',
+			unlocks:
+				'Require a password (and optional 2-factor) so only you can use this deployment. Essential once it’s on a public URL.',
 			prereqs: [
 				{
 					env: 'STUDIO_PASSWORD',
@@ -80,7 +84,8 @@ export function getCapabilities(): Capability[] {
 		{
 			id: 'llm',
 			label: 'Extract events with AI',
-			unlocks: 'Pull events out of unstructured text — newsletters, listings pages. Powers the Paste-text and Scrape sources.',
+			unlocks:
+				'Pull events out of unstructured text — newsletters, listings pages. Powers the Paste-text and Scrape sources.',
 			prereqs: [
 				{
 					env: 'INFERENCE_API_KEY',

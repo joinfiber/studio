@@ -98,14 +98,29 @@ describe('weekToSpec / weekFromSpec', () => {
 		w[0] = open('09:00', '17:00');
 		w[5] = open('10:00', '14:00');
 		expect(weekToSpec(w)).toEqual([
-			{ '@type': 'OpeningHoursSpecification', dayOfWeek: 'Monday', opens: '09:00', closes: '17:00' },
-			{ '@type': 'OpeningHoursSpecification', dayOfWeek: 'Saturday', opens: '10:00', closes: '14:00' },
+			{
+				'@type': 'OpeningHoursSpecification',
+				dayOfWeek: 'Monday',
+				opens: '09:00',
+				closes: '17:00',
+			},
+			{
+				'@type': 'OpeningHoursSpecification',
+				dayOfWeek: 'Saturday',
+				opens: '10:00',
+				closes: '14:00',
+			},
 		]);
 	});
 
 	it('round-trips through a spec, tolerating schema.org URL dayOfWeek', () => {
 		const spec = [
-			{ '@type': 'OpeningHoursSpecification', dayOfWeek: 'https://schema.org/Monday', opens: '09:00', closes: '17:00' },
+			{
+				'@type': 'OpeningHoursSpecification',
+				dayOfWeek: 'https://schema.org/Monday',
+				opens: '09:00',
+				closes: '17:00',
+			},
 		];
 		const w = weekFromSpec(spec);
 		expect(w[0]).toEqual(open('09:00', '17:00'));

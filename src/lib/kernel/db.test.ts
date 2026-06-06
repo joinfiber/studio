@@ -30,7 +30,10 @@ const mk = (id: string, name: string): EventCandidate => ({
 // In-memory libsql (no DATABASE_URL in tests) — exercises the real store.
 describe('candidate store', () => {
 	it('round-trips: save (stamping organizer) → list → get → delete', async () => {
-		const saved = await saveCandidates([mk('cal-0', 'Round Trip A'), mk('cal-1', 'Round Trip B')], 'Acme Co');
+		const saved = await saveCandidates(
+			[mk('cal-0', 'Round Trip A'), mk('cal-1', 'Round Trip B')],
+			'Acme Co',
+		);
 		expect(saved).toBe(2);
 
 		const pending = await listCandidates('pending');
@@ -52,7 +55,9 @@ describe('candidate store', () => {
 
 	it('updateCandidate replaces the payload and re-derives the organizer column', async () => {
 		await saveCandidates([mk('cal-9', 'Before Edit')], 'Old Org');
-		const before = (await listCandidates('pending')).find((p) => p.candidate.data.name === 'Before Edit')!;
+		const before = (await listCandidates('pending')).find(
+			(p) => p.candidate.data.name === 'Before Edit',
+		)!;
 		const edited = structuredClone(before.candidate);
 		edited.data.name = 'After Edit';
 		edited.data.category = 'live_music';
@@ -69,7 +74,9 @@ describe('candidate store', () => {
 		const cand = mk('cal-2', 'Self Organized');
 		cand.data.organizer_name = 'Built-in Org';
 		await saveCandidates([cand]);
-		const row = (await listCandidates('pending')).find((p) => p.candidate.data.name === 'Self Organized');
+		const row = (await listCandidates('pending')).find(
+			(p) => p.candidate.data.name === 'Self Organized',
+		);
 		expect(row?.organizer).toBe('Built-in Org');
 		if (row) await deleteCandidate(row.id);
 	});

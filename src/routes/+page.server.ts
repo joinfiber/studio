@@ -89,7 +89,9 @@ export const actions: Actions = {
 		if (!row) return fail(404, { error: 'Candidate not found.' });
 		const organizer = row.organizer || row.candidate.data.organizer_name || '';
 		if (!organizer.trim()) {
-			return fail(400, { error: 'No organizer on this candidate — re-save it from the source with an organizer.' });
+			return fail(400, {
+				error: 'No organizer on this candidate — re-save it from the source with an organizer.',
+			});
 		}
 
 		try {

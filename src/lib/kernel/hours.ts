@@ -201,7 +201,12 @@ export function weekToSpec(week: WeekHours): OpeningHoursSpec[] {
 	const out: OpeningHoursSpec[] = [];
 	week.forEach((d, i) => {
 		if (d.closed || !isValidTime(d.open) || !isValidTime(d.close)) return;
-		out.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: DAYS[i], opens: d.open, closes: d.close });
+		out.push({
+			'@type': 'OpeningHoursSpecification',
+			dayOfWeek: DAYS[i],
+			opens: d.open,
+			closes: d.close,
+		});
 	});
 	return out;
 }

@@ -31,7 +31,15 @@ export const load: PageServerLoad = async ({ locals }) => {
 		: null;
 
 	if (!commons.configured || !commons.sdk) {
-		return { live: false as const, mapReady: !!styleUrl, styleUrl, capability, googleReady, reviewWarning: reviewWarn, points: [] as OrgPoint[] };
+		return {
+			live: false as const,
+			mapReady: !!styleUrl,
+			styleUrl,
+			capability,
+			googleReady,
+			reviewWarning: reviewWarn,
+			points: [] as OrgPoint[],
+		};
 	}
 
 	const points: OrgPoint[] = [];
@@ -40,7 +48,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 	try {
 		// Page through the org list, collecting those with a geocoded primary place.
 		while (points.length < MAX_POINTS && offset < MAX_OFFSET) {
-			const r = await commons.sdk.GET('/organizations', { params: { query: { limit: CHUNK, offset } } });
+			const r = await commons.sdk.GET('/organizations', {
+				params: { query: { limit: CHUNK, offset } },
+			});
 			const orgs = (r.data?.organizations ?? []) as Organization[];
 			for (const o of orgs) {
 				const geo = o.location?.geo;

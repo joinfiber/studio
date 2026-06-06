@@ -41,8 +41,7 @@ export function normalizeSheetUrl(raw: string): string {
 	const u = assertSafeUrl(raw);
 	const m = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/.exec(u.pathname);
 	if (m && u.hostname.includes('docs.google.com') && !u.pathname.includes('/export')) {
-		const gid =
-			(u.hash.match(/gid=(\d+)/) ?? u.search.match(/gid=(\d+)/) ?? [])[1] ?? '0';
+		const gid = (u.hash.match(/gid=(\d+)/) ?? u.search.match(/gid=(\d+)/) ?? [])[1] ?? '0';
 		return `https://docs.google.com/spreadsheets/d/${m[1]}/export?format=csv&gid=${gid}`;
 	}
 	return u.toString();

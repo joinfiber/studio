@@ -39,7 +39,10 @@ interface PlaceInput {
  * creating the Place in the Commons. Returns `{}` when no location was given
  * (a placeless org is valid). On failure returns `{ error }`.
  */
-async function resolvePlaceId(sdk: Sdk, input: PlaceInput): Promise<{ id?: string; error?: string }> {
+async function resolvePlaceId(
+	sdk: Sdk,
+	input: PlaceInput,
+): Promise<{ id?: string; error?: string }> {
 	const { name, address } = input;
 	if (!address && !input.lat) return {}; // no location → placeless
 
@@ -63,7 +66,9 @@ async function resolvePlaceId(sdk: Sdk, input: PlaceInput): Promise<{ id?: strin
 	} else {
 		const geo = await geocode(address);
 		if (!geo) {
-			return { error: `Couldn’t geocode “${address}”. Try a more specific address, or pick from the list.` };
+			return {
+				error: `Couldn’t geocode “${address}”. Try a more specific address, or pick from the list.`,
+			};
 		}
 		latitude = geo.lat;
 		longitude = geo.lng;
@@ -78,16 +83,26 @@ async function resolvePlaceId(sdk: Sdk, input: PlaceInput): Promise<{ id?: strin
 	}
 
 	const result = await sdk.POST('/service/places', {
-		body: { name: name || postal?.streetAddress || 'Place', geo: { latitude, longitude }, address: postal, googlePlaceId },
+		body: {
+			name: name || postal?.streetAddress || 'Place',
+			geo: { latitude, longitude },
+			address: postal,
+			googlePlaceId,
+		},
 	});
 	if (result.data) return { id: result.data.place.id };
 	return {
-		error: result.error?.error?.message ?? `Commons returned ${result.response.status} creating the place.`,
+		error:
+			result.error?.error?.message ??
+			`Commons returned ${result.response.status} creating the place.`,
 	};
 }
 
 function splitList(raw: string): string[] | undefined {
-	const items = raw.split(',').map((t) => t.trim()).filter(Boolean);
+	const items = raw
+		.split(',')
+		.map((t) => t.trim())
+		.filter(Boolean);
 	return items.length ? items : undefined;
 }
 
@@ -95,7 +110,10 @@ export const actions: Actions = {
 	organization: async ({ request, locals }) => {
 		const { commons } = locals;
 		if (!commons.configured || !commons.sdk) {
-			return fail(400, { kind: 'organization' as const, error: 'Commons isn’t configured on this instance.' });
+			return fail(400, {
+				kind: 'organization' as const,
+				error: 'Commons isn’t configured on this instance.',
+			});
 		}
 
 		const data = await request.formData();
@@ -165,7 +183,10 @@ export const actions: Actions = {
 	event: async ({ request, locals }) => {
 		const { commons } = locals;
 		if (!commons.configured || !commons.sdk) {
-			return fail(400, { kind: 'event' as const, error: 'Commons isn’t configured on this instance.' });
+			return fail(400, {
+				kind: 'event' as const,
+				error: 'Commons isn’t configured on this instance.',
+			});
 		}
 
 		const data = await request.formData();
@@ -188,7 +209,8 @@ export const actions: Actions = {
 				error: 'Organizer is required — events attach to an organization.',
 			});
 		}
-		if (!when) return fail(400, { kind: 'event' as const, error: 'A start date/time is required.' });
+		if (!when)
+			return fail(400, { kind: 'event' as const, error: 'A start date/time is required.' });
 
 		try {
 			const organizerOrganizationId = await resolveOrganizerId(commons.sdk, organizer);
@@ -233,7 +255,10 @@ export const actions: Actions = {
 	place: async ({ request, locals }) => {
 		const { commons } = locals;
 		if (!commons.configured || !commons.sdk) {
-			return fail(400, { kind: 'place' as const, error: 'Commons isn’t configured on this instance.' });
+			return fail(400, {
+				kind: 'place' as const,
+				error: 'Commons isn’t configured on this instance.',
+			});
 		}
 
 		const data = await request.formData();
@@ -258,7 +283,10 @@ export const actions: Actions = {
 			});
 			if (place.error) return fail(422, { kind: 'place' as const, error: place.error });
 			if (!place.id) {
-				return fail(400, { kind: 'place' as const, error: 'A place needs an address or a picked result.' });
+				return fail(400, {
+					kind: 'place' as const,
+					error: 'A place needs an address or a picked result.',
+				});
 			}
 			return { kind: 'place' as const, success: true as const, name };
 		} catch (err) {
