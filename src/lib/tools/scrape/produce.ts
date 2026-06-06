@@ -12,7 +12,7 @@
  */
 
 import type { EventCandidate } from '$lib/kernel/candidate.js';
-import { assertSafeUrl } from '$lib/kernel/tool.js';
+import { assertSafeUrl, safeFetch } from '$lib/kernel/tool.js';
 import { extractEventsFromText } from '$lib/tools/extract/llm.js';
 import { candidatesFromExtracted } from '$lib/tools/extract/produce.js';
 
@@ -38,7 +38,7 @@ export function htmlToText(html: string): string {
 
 export async function scrapeAndExtract(rawUrl: string, timezone: string): Promise<EventCandidate[]> {
 	const url = assertSafeUrl(rawUrl).toString();
-	const res = await fetch(url, {
+	const res = await safeFetch(url, {
 		headers: {
 			'User-Agent': 'StudioV3/1.0 (+neighborhood-commons importer)',
 			Accept: 'text/html, application/xhtml+xml, */*',

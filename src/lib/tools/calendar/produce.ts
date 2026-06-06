@@ -10,7 +10,7 @@
  */
 
 import { candidateId, type EventCandidate } from '$lib/kernel/candidate.js';
-import { assertSafeUrl } from '$lib/kernel/tool.js';
+import { assertSafeUrl, safeFetch } from '$lib/kernel/tool.js';
 import { parseIcal } from './ical.js';
 
 export interface CalendarConfig {
@@ -79,7 +79,7 @@ export async function produceFromIcal(config: CalendarConfig): Promise<EventCand
 	const url = assertSafeUrl(toIcalUrl(config.url)).toString();
 	const defaultTz = config.defaultTimezone ?? 'America/New_York';
 
-	const res = await fetch(url, {
+	const res = await safeFetch(url, {
 		headers: { Accept: 'text/calendar, text/plain, */*' },
 		signal: AbortSignal.timeout(20000),
 	});

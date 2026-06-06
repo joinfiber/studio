@@ -61,7 +61,8 @@ function initClient(): Promise<Client> {
 		// e.g. a file: path whose directory doesn't exist (wrong volume mount).
 		// Don't take the store (and every review write) down — fall back to
 		// in-memory and surface a precise warning instead of a 500.
-		dbWarning = `couldn't open ${url} — check the volume mount path; reviews are in-memory and won't persist`;
+		const safe = url.replace(/\/\/[^@/]*@/, '//***@'); // redact any user:pass in the URL
+		dbWarning = `couldn't open ${safe} — check the volume mount path; reviews are in-memory and won't persist`;
 		console.error(`[db] ${dbWarning}:`, err);
 		client = createClient({ url: ':memory:' });
 	}

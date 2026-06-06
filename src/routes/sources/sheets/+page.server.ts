@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import type { EventCandidate } from '$lib/kernel/candidate.js';
-import { assertSafeUrl } from '$lib/kernel/tool.js';
+import { assertSafeUrl, safeFetch } from '$lib/kernel/tool.js';
 import { parseCsv } from '$lib/tools/sheets/csv.js';
 import { normalizeSheetUrl } from '$lib/tools/sheets/produce.js';
 import { publishBatch } from '$lib/kernel/publish.js';
@@ -21,7 +21,7 @@ export const actions: Actions = {
 		}
 
 		try {
-			const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
+			const res = await safeFetch(url, { signal: AbortSignal.timeout(20000) });
 			if (!res.ok) {
 				return fail(400, {
 					error: `Fetch failed: ${res.status}. Is the sheet published / link-shared?`,

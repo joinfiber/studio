@@ -107,8 +107,10 @@ export async function extractEventsFromText(text: string): Promise<ExtractedEven
 	});
 
 	if (!res.ok) {
+		// Log the provider's body server-side; don't echo it to the client.
 		const body = await res.text().catch(() => '');
-		throw new Error(`Inference request failed (${res.status}). ${body.slice(0, 200)}`);
+		if (body) console.warn(`[inference] request failed ${res.status}: ${body.slice(0, 300)}`);
+		throw new Error(`Inference request failed (${res.status}).`);
 	}
 
 	const data = (await res.json()) as {

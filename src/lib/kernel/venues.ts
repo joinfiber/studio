@@ -40,6 +40,21 @@ export async function createVenue(
 	sdk: Sdk,
 	v: VenueInput,
 ): Promise<{ orgId?: string; placeId?: string; error?: string }> {
+	// Bounds (defense-in-depth — the Commons validates too, but fail fast and
+	// keep obviously-bad data out of the write).
+	if (!v.name?.trim() || v.name.length > 200) {
+		return { error: 'Name is required and must be ≤200 characters.' };
+	}
+	if (
+		!Number.isFinite(v.lat) || v.lat < -90 || v.lat > 90 ||
+		!Number.isFinite(v.lng) || v.lng < -180 || v.lng > 180
+	) {
+		return { error: 'Coordinates are out of range.' };
+	}
+	if ((v.sameAs?.length ?? 0) > 25 || (v.tags?.length ?? 0) > 25 || (v.openingHours?.length ?? 0) > 60) {
+		return { error: 'Too many social links, tags, or hours entries.' };
+	}
+
 	// Stable identity (best-effort): the place_id is the only Google field we store.
 	let googlePlaceId: string | undefined;
 	if (googlePlacesConfigured()) {

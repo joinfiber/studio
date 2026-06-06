@@ -10,7 +10,7 @@
  */
 
 import { candidateId, type EventCandidate } from '$lib/kernel/candidate.js';
-import { assertSafeUrl } from '$lib/kernel/tool.js';
+import { safeFetch } from '$lib/kernel/tool.js';
 import { parseFeed } from './parse.js';
 
 // A feed date is a real instant (RFC-822/ISO, with an offset). Keep it as a
@@ -41,8 +41,7 @@ function stripHtml(s: string | null): string | null {
 }
 
 export async function produceFromFeed(url: string, timezone: string): Promise<EventCandidate[]> {
-	const safe = assertSafeUrl(url).toString();
-	const res = await fetch(safe, {
+	const res = await safeFetch(url, {
 		headers: {
 			Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
 		},
@@ -66,7 +65,7 @@ export async function produceFromFeed(url: string, timezone: string): Promise<Ev
 			kind: 'event' as const,
 			status: 'pending' as const,
 			source_tool: 'rss',
-			source_uri: safe,
+			source_uri: url,
 			created_at: now,
 			data: {
 				name: it.title as string,
@@ -79,7 +78,7 @@ export async function produceFromFeed(url: string, timezone: string): Promise<Ev
 				organizer_name: null,
 				image_url: null,
 				source_method: 'proxied',
-				source_feed_url: safe,
+				source_feed_url: url,
 			},
 		}));
 }

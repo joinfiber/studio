@@ -39,10 +39,18 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	if (!patch || Object.keys(patch).length === 0) {
 		return json({ error: 'No changes.' }, { status: 400 });
 	}
+	// Allowlist the fields a caller may set — don't forward an arbitrary object
+	// to the privileged write.
+	const ALLOWED = ['name', 'url', 'telephone', 'email', 'description', 'logo', 'sameAs', 'tags', 'commercial', 'openingHoursSpecification'];
+	const body: Record<string, unknown> = {};
+	for (const k of ALLOWED) if (k in patch) body[k] = (patch as Record<string, unknown>)[k];
+	if (Object.keys(body).length === 0) {
+		return json({ error: 'No editable fields in the update.' }, { status: 400 });
+	}
 
 	const r = await commons.sdk.PATCH('/service/organizations/{id}', {
 		params: { path: { id: params.id } },
-		body: patch as OrgInput,
+		body: body as OrgInput,
 	});
 	if (r.error) {
 		const status = r.response.status;
