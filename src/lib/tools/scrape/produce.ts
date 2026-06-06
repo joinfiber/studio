@@ -15,6 +15,7 @@ import type { EventCandidate } from '$lib/kernel/candidate.js';
 import { assertSafeUrl, safeFetch } from '$lib/kernel/tool.js';
 import { extractEventsFromText } from '$lib/tools/extract/llm.js';
 import { candidatesFromExtracted } from '$lib/tools/extract/produce.js';
+import { commonsUserAgent } from '$lib/kernel/commons-client.js';
 
 export function htmlToText(html: string): string {
 	return html
@@ -43,7 +44,7 @@ export async function scrapeAndExtract(
 	const url = assertSafeUrl(rawUrl).toString();
 	const res = await safeFetch(url, {
 		headers: {
-			'User-Agent': 'StudioV3/1.0 (+neighborhood-commons importer)',
+			'User-Agent': commonsUserAgent(),
 			Accept: 'text/html, application/xhtml+xml, */*',
 		},
 		signal: AbortSignal.timeout(25000),

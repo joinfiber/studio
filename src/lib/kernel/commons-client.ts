@@ -77,3 +77,13 @@ export function assertConfigured(client: CommonsClient): asserts client is Commo
 		);
 	}
 }
+
+/**
+ * User-Agent for Studio's outbound calls to external services (OSM Nominatim /
+ * Overpass, scraped pages) — identifies the app + contributor per their usage
+ * policies. One source of truth so every outbound request is attributed alike.
+ */
+export function commonsUserAgent(): string {
+	const contributor = env.COMMONS_CONTRIBUTOR_SLUG || 'unknown';
+	return `neighborhood-commons Studio (contributor: ${contributor})`;
+}

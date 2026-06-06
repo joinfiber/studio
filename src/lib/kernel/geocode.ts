@@ -15,6 +15,7 @@
  */
 
 import { env } from '$env/dynamic/private';
+import { commonsUserAgent } from '$lib/kernel/commons-client.js';
 
 export interface GeocodedAddress {
 	streetAddress?: string;
@@ -70,10 +71,9 @@ export async function geocode(query: string): Promise<GeocodeResult | null> {
 	if (env.GEOCODER_API_KEY) url.searchParams.set('key', env.GEOCODER_API_KEY);
 
 	// OSM usage policy: identify the application. Settable server-side (Node).
-	const contributor = env.COMMONS_CONTRIBUTOR_SLUG || 'unknown';
 	const res = await fetch(url, {
 		headers: {
-			'User-Agent': `neighborhood-commons Studio (contributor: ${contributor})`,
+			'User-Agent': commonsUserAgent(),
 			Accept: 'application/json',
 		},
 		signal: AbortSignal.timeout(15000),
@@ -176,10 +176,9 @@ export async function searchPlaces(query: string, limit = 5): Promise<PlaceCandi
 	url.searchParams.set('extratags', '1'); // website / phone / socials
 	if (env.GEOCODER_API_KEY) url.searchParams.set('key', env.GEOCODER_API_KEY);
 
-	const contributor = env.COMMONS_CONTRIBUTOR_SLUG || 'unknown';
 	const res = await fetch(url, {
 		headers: {
-			'User-Agent': `neighborhood-commons Studio (contributor: ${contributor})`,
+			'User-Agent': commonsUserAgent(),
 			Accept: 'application/json',
 		},
 		signal: AbortSignal.timeout(15000),
@@ -232,10 +231,9 @@ export async function geocodeArea(query: string): Promise<AreaBBox | null> {
 	url.searchParams.set('limit', '1');
 	if (env.GEOCODER_API_KEY) url.searchParams.set('key', env.GEOCODER_API_KEY);
 
-	const contributor = env.COMMONS_CONTRIBUTOR_SLUG || 'unknown';
 	const res = await fetch(url, {
 		headers: {
-			'User-Agent': `neighborhood-commons Studio (contributor: ${contributor})`,
+			'User-Agent': commonsUserAgent(),
 			Accept: 'application/json',
 		},
 		signal: AbortSignal.timeout(15000),

@@ -372,7 +372,7 @@
 		week = weekFromGooglePeriods(google.hoursPeriods);
 		hoursOpen = true;
 	}
-	function useGoogle(field: 'name' | 'website' | 'phone', value: string | null) {
+	function applyToDraft(field: 'name' | 'website' | 'phone', value: string | null) {
 		if (!draft || !value) return;
 		draft[field] = value;
 		toast.push('Applied', 'success', 900);
@@ -806,7 +806,7 @@
 									<a class="ref-val" href={web} target="_blank" rel="noopener noreferrer">{web}</a
 									><button class="copy" onclick={() => copy(web)}>copy</button><button
 										class="use"
-										onclick={() => useGoogle('website', web)}>use</button
+										onclick={() => applyToDraft('website', web)}>use</button
 									>
 								</div>
 							{/if}
@@ -815,7 +815,7 @@
 								<div class="ref-row">
 									<span class="ref-val">{tel}</span><button class="copy" onclick={() => copy(tel)}
 										>copy</button
-									><button class="use" onclick={() => useGoogle('phone', tel)}>use</button>
+									><button class="use" onclick={() => applyToDraft('phone', tel)}>use</button>
 								</div>
 							{/if}
 							{#each s.sameAs ?? [] as so}
@@ -865,7 +865,7 @@
 										<div class="ref-row">
 											<span class="ref-val">{g.name}</span><button
 												class="use"
-												onclick={() => useGoogle('name', g.name)}>use</button
+												onclick={() => applyToDraft('name', g.name)}>use</button
 											>
 										</div>
 									{/if}
@@ -881,7 +881,7 @@
 										{@const gw = g.website}
 										<div class="ref-row">
 											<a class="ref-val" href={gw} target="_blank" rel="noopener noreferrer">{gw}</a
-											><button class="use" onclick={() => useGoogle('website', gw)}>use</button>
+											><button class="use" onclick={() => applyToDraft('website', gw)}>use</button>
 										</div>
 									{/if}
 									{#if g.phone}
@@ -889,7 +889,7 @@
 										<div class="ref-row">
 											<span class="ref-val">{gp}</span><button
 												class="use"
-												onclick={() => useGoogle('phone', gp)}>use</button
+												onclick={() => applyToDraft('phone', gp)}>use</button
 											>
 										</div>
 									{/if}

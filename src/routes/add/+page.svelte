@@ -164,7 +164,7 @@
 			submitting = true;
 			return async ({ result, update }) => {
 				submitting = false;
-				if (result.type === 'success' && result.data?.success) {
+				if (result.type === 'success' && result.data?.ok) {
 					toast.push(
 						`Published organization “${result.data.name}” (${result.data.slug})`,
 						'success',
@@ -277,7 +277,7 @@
 			submitting = true;
 			return async ({ result, update }) => {
 				submitting = false;
-				if (result.type === 'success' && result.data?.success) {
+				if (result.type === 'success' && result.data?.ok) {
 					toast.push(`Published event “${result.data.name}”`, 'success');
 					await update({ reset: true });
 				} else if (result.type === 'failure') {
@@ -357,7 +357,7 @@
 			submitting = true;
 			return async ({ result, update }) => {
 				submitting = false;
-				if (result.type === 'success' && result.data?.success) {
+				if (result.type === 'success' && result.data?.ok) {
 					toast.push(`Published place “${result.data.name}”`, 'success');
 					resetForm();
 					await update({ reset: true });

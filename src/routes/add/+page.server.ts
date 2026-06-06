@@ -155,7 +155,7 @@ export const actions: Actions = {
 		if (result.data) {
 			return {
 				kind: 'organization' as const,
-				success: true as const,
+				ok: true as const,
 				name: result.data.organization.name,
 				slug: result.data.organization.slug,
 			};
@@ -230,7 +230,7 @@ export const actions: Actions = {
 			});
 
 			if (result.data) {
-				return { kind: 'event' as const, success: true as const, name };
+				return { kind: 'event' as const, ok: true as const, name };
 			}
 
 			const status = result.response.status;
@@ -288,7 +288,7 @@ export const actions: Actions = {
 					error: 'A place needs an address or a picked result.',
 				});
 			}
-			return { kind: 'place' as const, success: true as const, name };
+			return { kind: 'place' as const, ok: true as const, name };
 		} catch (err) {
 			return fail(400, {
 				kind: 'place' as const,

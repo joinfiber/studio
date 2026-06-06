@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import type { EventCandidate } from '$lib/kernel/candidate.js';
-import { getCapability } from '$lib/kernel/capabilities.js';
+import { getCapability, capabilityReady } from '$lib/kernel/capabilities.js';
 import { extractEventsFromText } from '$lib/tools/extract/llm.js';
 import { candidatesFromExtracted } from '$lib/tools/extract/produce.js';
 import { publishBatch } from '$lib/kernel/publish.js';
@@ -12,7 +12,7 @@ export const load: PageServerLoad = () => {
 
 export const actions: Actions = {
 	extract: async ({ request }) => {
-		if (!getCapability('llm')?.ready) {
+		if (!capabilityReady('llm')) {
 			return fail(400, { error: 'LLM extraction isn’t configured (set INFERENCE_API_KEY).' });
 		}
 		const data = await request.formData();

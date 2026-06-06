@@ -14,6 +14,7 @@
 
 import { env } from '$env/dynamic/private';
 import { contactFromOsmTags, type GeocodedAddress, type AreaBBox } from '$lib/kernel/geocode.js';
+import { commonsUserAgent } from '$lib/kernel/commons-client.js';
 
 const DEFAULT_OVERPASS = 'https://overpass-api.de/api/interpreter';
 
@@ -192,13 +193,12 @@ export async function queryVenues(
 	if (!query) return { venues: [], truncated: false };
 
 	const base = env.OVERPASS_API_URL || DEFAULT_OVERPASS;
-	const contributor = env.COMMONS_CONTRIBUTOR_SLUG || 'unknown';
 
 	const res = await fetch(base, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/x-www-form-urlencoded',
-			'User-Agent': `neighborhood-commons Studio (contributor: ${contributor})`,
+			'User-Agent': commonsUserAgent(),
 		},
 		body: `data=${encodeURIComponent(query)}`,
 		signal: AbortSignal.timeout(95000),
