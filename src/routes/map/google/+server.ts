@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { fetchGoogleDetails } from '$lib/kernel/google-details.js';
-import { googlePlacesConfigured } from '$lib/kernel/google-places.js';
+import { fetchGoogleDetails } from '$lib/venues/google-details.js';
+import { googlePlacesConfigured } from '$lib/venues/google-places.js';
 
 /**
  * Reference lookup for the curation panel: Google's data for a venue, shown

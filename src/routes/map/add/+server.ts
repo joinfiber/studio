@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { createVenue } from '$lib/kernel/venues.js';
-import type { VenueCandidate } from '$lib/tools/venues/overpass.js';
+import { createVenue } from '$lib/venues/create.js';
+import type { VenueCandidate } from '$lib/venues/overpass.js';
 
 /**
  * Add an OSM venue (gray dot) to the Commons — creates the org + place. The

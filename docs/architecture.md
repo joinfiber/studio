@@ -40,6 +40,10 @@ The operator folder is structurally separate from `tools/` so the seam is folder
 
 The baseline ships no operator modules — the folder is the reserved seam for genuinely admin-only tools. (Moderating an app's user submissions is *not* admin-only: it needs only a shared key to that app, so it lives in `tools/submissions/`.)
 
+## The venue feature (`src/lib/venues/`)
+
+The one feature with enough domain logic to earn its own folder. Venues span three surfaces — the map, the Venues tab, and the bulk importer — so their shared pieces stay together instead of scattered through the kernel: `create.ts` (create an org + place), `overpass.ts` (OSM venue search), `hours.ts` (the opening-hours model), and the Google enrichment (`google-places` / `google-details` / `google-search`). Like a tool it builds on the kernel; unlike a tool it writes to the Commons directly rather than producing review candidates. (`geocode.ts` stays in the kernel — manual Place entry uses it too.)
+
 ## The review surface (`src/routes/+page.svelte`)
 
 Two tabs, not a tab-per-source:

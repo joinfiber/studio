@@ -18,8 +18,8 @@
 		DAYS,
 		type WeekHours,
 		type DayHours,
-	} from '$lib/kernel/hours.js';
-	import type { GoogleDetails } from '$lib/kernel/google-details.js';
+	} from '$lib/venues/hours.js';
+	import type { GoogleDetails } from '$lib/venues/google-details.js';
 
 	type OsmVenue = {
 		name: string;

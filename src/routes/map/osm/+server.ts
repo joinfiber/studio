@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { queryVenues, CATEGORY_GROUPS } from '$lib/tools/venues/overpass.js';
+import { queryVenues, CATEGORY_GROUPS } from '$lib/venues/overpass.js';
 
 /**
  * OSM businesses in the current map viewport (gray dots). Server-proxied so the

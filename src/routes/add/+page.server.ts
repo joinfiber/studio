@@ -4,7 +4,7 @@ import type { Client } from 'openapi-fetch';
 import type { paths } from 'neighborhood-commons';
 import { resolveOrganizerId, toOffsetIso } from '$lib/kernel/publish.js';
 import { geocode, type GeocodedAddress } from '$lib/kernel/geocode.js';
-import { findGooglePlaceId, googlePlacesConfigured } from '$lib/kernel/google-places.js';
+import { findGooglePlaceId, googlePlacesConfigured } from '$lib/venues/google-places.js';
 
 /**
  * Add → publish. Writes go server-side (the Commons key is private).

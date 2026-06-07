@@ -2,7 +2,7 @@ import type { PageServerLoad } from './$types';
 import { env } from '$env/dynamic/private';
 import type { Organization } from 'neighborhood-commons';
 import { getCapability } from '$lib/kernel/capabilities.js';
-import { googlePlacesConfigured } from '$lib/kernel/google-places.js';
+import { googlePlacesConfigured } from '$lib/venues/google-places.js';
 import { listReviewedOrgIds, reviewWarning } from '$lib/kernel/db.js';
 
 export interface OrgPoint {

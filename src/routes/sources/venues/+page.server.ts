@@ -3,8 +3,8 @@ import type { Actions, PageServerLoad } from './$types';
 import type { Client } from 'openapi-fetch';
 import type { paths } from 'neighborhood-commons';
 import { geocodeArea } from '$lib/kernel/geocode.js';
-import { queryVenues, CATEGORY_GROUPS, type VenueCandidate } from '$lib/tools/venues/overpass.js';
-import { createVenue } from '$lib/kernel/venues.js';
+import { queryVenues, CATEGORY_GROUPS, type VenueCandidate } from '$lib/venues/overpass.js';
+import { createVenue } from '$lib/venues/create.js';
 
 type Sdk = Client<paths>;
 

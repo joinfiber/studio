@@ -9,7 +9,7 @@
 import type { Client } from 'openapi-fetch';
 import type { paths, components } from 'neighborhood-commons';
 import { findGooglePlaceId, googlePlacesConfigured } from './google-places.js';
-import type { GeocodedAddress } from './geocode.js';
+import type { GeocodedAddress } from '$lib/kernel/geocode.js';
 
 type Sdk = Client<paths>;
 type PlaceInput = components['schemas']['PlaceInput'];
