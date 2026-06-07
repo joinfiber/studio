@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import type { EventCandidate } from '$lib/kernel/candidate.js';
-import { assertSafeUrl, safeFetch } from '$lib/kernel/tool.js';
+import { assertSafeUrl, safeFetch } from '$lib/kernel/safe-fetch.js';
 import { parseCsv } from '$lib/tools/sheets/csv.js';
 import { normalizeSheetUrl } from '$lib/tools/sheets/produce.js';
 import { publishBatch } from '$lib/kernel/publish.js';

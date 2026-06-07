@@ -11,7 +11,7 @@
 
 import { candidateId, type EventCandidate } from '$lib/kernel/candidate.js';
 import { decodeEntities } from '$lib/kernel/html.js';
-import { safeFetch } from '$lib/kernel/tool.js';
+import { safeFetch } from '$lib/kernel/safe-fetch.js';
 import { parseFeed } from './parse.js';
 
 // A feed date is a real instant (RFC-822/ISO, with an offset). Keep it as a

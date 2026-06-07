@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { assertSafeUrl } from './tool.js';
+import { assertSafeUrl } from './safe-fetch.js';
 
 describe('assertSafeUrl', () => {
 	it('accepts http and https URLs', () => {

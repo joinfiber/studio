@@ -43,8 +43,8 @@ Studio ships a **generic scraper** (`src/lib/tools/scrape/`): fetch a page → s
 
 When the generic pass isn't good enough for a specific site (it misses a structured table, a custom date format, a JS-rendered list), write a **site-specific produce()**:
 
-1. Create `src/lib/tools/your-site/produce.ts` exporting `produce(config) → Promise<Candidate[]>`.
-2. Fetch the page (use `assertSafeUrl` from `$lib/kernel/tool`).
+1. Create `src/lib/tools/your-site/produce.ts` exporting a producer that returns `Promise<Candidate[]>`. (The existing tools vary in signature — a config object, a URL, a parsed row set — match whatever fits your source; there's no enforced interface.)
+2. Fetch the page (use `assertSafeUrl` / `safeFetch` from `$lib/kernel/safe-fetch`).
 3. Extract however the site demands — a targeted regex/selector pass, or hand the cleaned text to `extractEventsFromText` from `$lib/tools/extract/llm` and post-process.
 4. Map to `EventCandidate` with `source_method: 'proxied'` and `source_feed_url` = the page URL.
 5. Add a route under `src/routes/sources/your-site/` mirroring `scrape/` (server action → review → `publishBatch`).

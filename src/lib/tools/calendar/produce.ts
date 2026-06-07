@@ -9,7 +9,7 @@
  */
 
 import { candidateId, type EventCandidate } from '$lib/kernel/candidate.js';
-import { assertSafeUrl, safeFetch } from '$lib/kernel/tool.js';
+import { assertSafeUrl, safeFetch } from '$lib/kernel/safe-fetch.js';
 import { parseIcal } from './ical.js';
 
 export interface CalendarConfig {

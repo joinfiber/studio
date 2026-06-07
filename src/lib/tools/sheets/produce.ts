@@ -13,7 +13,7 @@
  */
 
 import { candidateId, type EventCandidate } from '$lib/kernel/candidate.js';
-import { assertSafeUrl } from '$lib/kernel/tool.js';
+import { assertSafeUrl } from '$lib/kernel/safe-fetch.js';
 
 /** Which CSV column feeds each event field. Empty string = unmapped. */
 export interface SheetMapping {

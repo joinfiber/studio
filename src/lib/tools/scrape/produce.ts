@@ -3,16 +3,16 @@
  * extractor. The "works for many sites out of the box" path.
  *
  * For sites the generic pass can't handle, the pattern is: write a
- * site-specific produce() against the IngestionTool interface (the
- * AI-authoring case — see docs/extending.md). This module is both the
- * generic tool and the worked template.
+ * site-specific produce() returning Candidate[] (the AI-authoring case — see
+ * docs/extending.md). This module is both the generic tool and the worked
+ * template.
  *
  * Provenance is `proxied` (the page is a relayed source; source_feed_url is
  * the page URL). Needs the LLM extraction capability.
  */
 
 import type { EventCandidate } from '$lib/kernel/candidate.js';
-import { assertSafeUrl, safeFetch } from '$lib/kernel/tool.js';
+import { assertSafeUrl, safeFetch } from '$lib/kernel/safe-fetch.js';
 import { extractEventsFromText } from '$lib/tools/extract/llm.js';
 import { candidatesFromExtracted } from '$lib/tools/extract/produce.js';
 import { commonsUserAgent } from '$lib/kernel/commons-client.js';

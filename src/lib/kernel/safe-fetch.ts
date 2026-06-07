@@ -1,27 +1,8 @@
 /**
- * Ingestion tool contract.
- *
- * Every tool — calendar, sheets, newsletter, scraper — converges on one
- * shape: given some config, produce candidates for the review→publish loop.
- * Config-driven tools (calendar/sheets/RSS) implement `produce` generically;
- * scrapers implement it per-site (the AI-authoring case).
- *
- * The interface is intentionally thin. It exists so a new tool author (and
- * their AI assistant) has one obvious target: "write a produce() that returns
- * Candidate[]." Everything downstream — review chrome, edit, publish — is
- * shared kernel.
+ * SSRF-safe fetch for user-supplied source URLs. The ingestion tools (calendar,
+ * RSS, sheets, scraper) fetch URLs the operator pastes; these guards keep those
+ * server-side fetches from reaching private/internal hosts.
  */
-
-import type { Candidate } from './candidate.js';
-
-export interface IngestionTool<Config = Record<string, unknown>> {
-	/** Stable id, matches the candidate's source_tool. */
-	id: string;
-	/** Human label for the operator UI. */
-	label: string;
-	/** Fetch + extract candidates from the configured source. */
-	produce(config: Config): Promise<Candidate[]>;
-}
 
 /**
  * Guard a user-supplied source URL before server-side fetch (basic SSRF
