@@ -57,31 +57,32 @@ interface NominatimResult {
 
 const DEFAULT_BASE = 'https://nominatim.openstreetmap.org';
 
+/**
+ * One Nominatim /search call — base URL, optional key, the OSM-policy User-Agent,
+ * and a timeout. Callers pass their query params and shape the results themselves.
+ */
+async function nominatimSearch(params: Record<string, string>): Promise<NominatimResult[]> {
+	const base = (env.GEOCODER_API_URL || DEFAULT_BASE).replace(/\/$/, '');
+	const url = new URL(`${base}/search`);
+	url.searchParams.set('format', 'jsonv2');
+	for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+	if (env.GEOCODER_API_KEY) url.searchParams.set('key', env.GEOCODER_API_KEY);
+	// OSM usage policy: identify the application. Settable server-side (Node).
+	const res = await fetch(url, {
+		headers: { 'User-Agent': commonsUserAgent(), Accept: 'application/json' },
+		signal: AbortSignal.timeout(15000),
+	});
+	if (!res.ok) throw new Error(`Geocoder returned ${res.status} ${res.statusText}.`);
+	return ((await res.json()) as NominatimResult[]) ?? [];
+}
+
 /** Geocode a free-text address. Returns null when nothing matches. Throws on a transport/endpoint error. */
 export async function geocode(query: string): Promise<GeocodeResult | null> {
 	const q = query.trim();
 	if (!q) return null;
 
-	const base = (env.GEOCODER_API_URL || DEFAULT_BASE).replace(/\/$/, '');
-	const url = new URL(`${base}/search`);
-	url.searchParams.set('q', q);
-	url.searchParams.set('format', 'jsonv2');
-	url.searchParams.set('limit', '1');
-	url.searchParams.set('addressdetails', '1');
-	if (env.GEOCODER_API_KEY) url.searchParams.set('key', env.GEOCODER_API_KEY);
-
-	// OSM usage policy: identify the application. Settable server-side (Node).
-	const res = await fetch(url, {
-		headers: {
-			'User-Agent': commonsUserAgent(),
-			Accept: 'application/json',
-		},
-		signal: AbortSignal.timeout(15000),
-	});
-	if (!res.ok) throw new Error(`Geocoder returned ${res.status} ${res.statusText}.`);
-
-	const results = (await res.json()) as NominatimResult[];
-	const r = results?.[0];
+	const results = await nominatimSearch({ q, limit: '1', addressdetails: '1' });
+	const r = results[0];
 	if (!r) return null;
 
 	const lat = Number(r.lat);
@@ -166,28 +167,15 @@ export async function searchPlaces(query: string, limit = 5): Promise<PlaceCandi
 	const q = query.trim();
 	if (!q) return [];
 
-	const base = (env.GEOCODER_API_URL || DEFAULT_BASE).replace(/\/$/, '');
-	const url = new URL(`${base}/search`);
-	url.searchParams.set('q', q);
-	url.searchParams.set('format', 'jsonv2');
-	url.searchParams.set('limit', String(limit));
-	url.searchParams.set('addressdetails', '1');
-	url.searchParams.set('namedetails', '1');
-	url.searchParams.set('extratags', '1'); // website / phone / socials
-	if (env.GEOCODER_API_KEY) url.searchParams.set('key', env.GEOCODER_API_KEY);
-
-	const res = await fetch(url, {
-		headers: {
-			'User-Agent': commonsUserAgent(),
-			Accept: 'application/json',
-		},
-		signal: AbortSignal.timeout(15000),
+	const results = await nominatimSearch({
+		q,
+		limit: String(limit),
+		addressdetails: '1',
+		namedetails: '1',
+		extratags: '1', // website / phone / socials
 	});
-	if (!res.ok) throw new Error(`Geocoder returned ${res.status} ${res.statusText}.`);
-
-	const results = (await res.json()) as NominatimResult[];
 	const out: PlaceCandidate[] = [];
-	for (const r of results ?? []) {
+	for (const r of results) {
 		const lat = Number(r.lat);
 		const lng = Number(r.lon);
 		if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
@@ -224,24 +212,8 @@ export async function geocodeArea(query: string): Promise<AreaBBox | null> {
 	const q = query.trim();
 	if (!q) return null;
 
-	const base = (env.GEOCODER_API_URL || DEFAULT_BASE).replace(/\/$/, '');
-	const url = new URL(`${base}/search`);
-	url.searchParams.set('q', q);
-	url.searchParams.set('format', 'jsonv2');
-	url.searchParams.set('limit', '1');
-	if (env.GEOCODER_API_KEY) url.searchParams.set('key', env.GEOCODER_API_KEY);
-
-	const res = await fetch(url, {
-		headers: {
-			'User-Agent': commonsUserAgent(),
-			Accept: 'application/json',
-		},
-		signal: AbortSignal.timeout(15000),
-	});
-	if (!res.ok) throw new Error(`Geocoder returned ${res.status} ${res.statusText}.`);
-
-	const results = (await res.json()) as NominatimResult[];
-	const r = results?.[0];
+	const results = await nominatimSearch({ q, limit: '1' });
+	const r = results[0];
 	const bb = r?.boundingbox;
 	if (!bb || bb.length < 4) return null;
 	const [south, north, west, east] = bb.map(Number);

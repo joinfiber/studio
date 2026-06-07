@@ -11,6 +11,7 @@
  */
 
 import { env } from '$env/dynamic/private';
+import { searchTextPlaces } from './google-search.js';
 
 /** Presence only — never the value. */
 export function googlePlacesConfigured(): boolean {
@@ -26,38 +27,8 @@ export async function findGooglePlaceId(
 	query: string,
 	bias?: { lat: number; lng: number },
 ): Promise<string | null> {
-	const key = env.GOOGLE_PLACES_API_KEY;
-	if (!key || !query.trim()) return null;
-
-	const body: Record<string, unknown> = { textQuery: query.trim(), maxResultCount: 1 };
-	if (bias) {
-		body.locationBias = {
-			circle: { center: { latitude: bias.lat, longitude: bias.lng }, radius: 500 },
-		};
-	}
-
-	try {
-		const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				'X-Goog-Api-Key': key,
-				// Field mask = the only field we want, and the only one we may store.
-				'X-Goog-FieldMask': 'places.id',
-			},
-			body: JSON.stringify(body),
-			signal: AbortSignal.timeout(15000),
-		});
-		if (!res.ok) {
-			console.warn(
-				`[google-places] place_id lookup returned ${res.status} (publishing without id)`,
-			);
-			return null;
-		}
-		const data = (await res.json()) as { places?: { id?: string }[] };
-		return data.places?.[0]?.id ?? null;
-	} catch (err) {
-		console.warn('[google-places] place_id lookup failed (publishing without id):', err);
-		return null;
-	}
+	// Field mask 'places.id' — the only field we want, and the only one Google's
+	// terms permit storing indefinitely.
+	const places = await searchTextPlaces<{ id?: string }>(query, bias, 'places.id', 'google-places');
+	return places?.[0]?.id ?? null;
 }
