@@ -14,6 +14,7 @@ import type { GeocodedAddress } from '$lib/kernel/geocode.js';
 type Sdk = Client<paths>;
 type PlaceInput = components['schemas']['PlaceInput'];
 type OrgInput = components['schemas']['OrganizationInput'];
+export type OpeningHoursEntry = components['schemas']['OpeningHoursEntry'];
 
 export interface VenueInput {
 	name: string;
@@ -29,7 +30,7 @@ export interface VenueInput {
 	 *  Commons accepts caller-set method; harmless (stripped) before then. */
 	method?: string;
 	/** schema.org OpeningHoursSpecification[] — the operator's curated hours. */
-	openingHours?: unknown[];
+	openingHours?: OpeningHoursEntry[];
 	/** OSM source ref, used as the place's external ID when no Google place_id
 	 *  is available (ecosystem convention: `osm:type/id`). */
 	osmType?: string;
@@ -109,10 +110,7 @@ export async function createVenue(
 		primaryPlaceId: placeId,
 	};
 	if (v.method) orgBody.method = v.method;
-	// openingHoursSpecification may also lag the SDK type; attach at runtime.
-	if (v.openingHours?.length) {
-		(orgBody as Record<string, unknown>).openingHoursSpecification = v.openingHours;
-	}
+	if (v.openingHours?.length) orgBody.openingHoursSpecification = v.openingHours;
 	const org = await sdk.POST('/service/organizations', { body: orgBody });
 	if (!org.data) {
 		const status = org.response.status;

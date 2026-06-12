@@ -10,15 +10,15 @@
  *
  * Provenance: we send the candidate's own source_method — imports are
  * 'proxied' (relayed third-party data, with source_feed_url), manual entries
- * 'self_asserted'. The Commons runtime accepts all three roles; 'proxied'
- * needs proxy_authority (admin keys bypass) + source_feed_url. The SDK 3.2
- * input type still lists only self_asserted|witnessed and omits source_feed_url
- * (a tracked SDK-gen lag), so those two are cast — no dishonest relabeling.
+ * 'self_asserted'. 'proxied' needs proxy_authority (admin keys bypass) +
+ * source_feed_url, and that pairing is ENFORCED here (Golden Rule #5): a
+ * proxied candidate without a usable source URL is refused, not relabeled
+ * and not quietly sent with its lineage missing.
  */
 
 import type { Client } from 'openapi-fetch';
 import type { paths, components } from 'neighborhood-commons';
-import type { EventCandidate } from './candidate.js';
+import type { EventCandidate, SourceMethod } from './candidate.js';
 
 type Sdk = Client<paths>;
 type ServiceEventInput = components['schemas']['ServiceEventInput'];
@@ -128,15 +128,37 @@ export async function publishEventCandidate(
 ): Promise<PublishResult> {
 	const d = candidate.data;
 	try {
-		// Honest provenance from the candidate itself: imports are 'proxied'
-		// (relayed third-party data), manual entries 'self_asserted'. 'proxied'
-		// requires source_feed_url and a key with proxy_authority (admin keys
-		// bypass). The SDK 3.2 input type lags the runtime — it omits 'proxied'
-		// and source_feed_url — so those are cast. Category keys are underscore
-		// in the Commons (kebab is read-side only); normalize at the boundary.
-		const base: ServiceEventInput = {
+		// The provenance pairing is enforced, not just carried: an unknown
+		// method or a proxied event without its source URL is refused here, at
+		// the single write boundary, regardless of which path produced the
+		// candidate. Category keys are underscore in the Commons (kebab is
+		// read-side only); normalize at the boundary.
+		const method: SourceMethod = d.source_method;
+		if (method !== 'self_asserted' && method !== 'proxied' && method !== 'witnessed') {
+			return { ok: false, error: `Unknown provenance method "${String(method)}".` };
+		}
+		if (method === 'proxied' && !/^https?:\/\//.test(d.source_feed_url ?? '')) {
+			return {
+				ok: false,
+				error:
+					'Relayed (proxied) events must carry their source URL — re-import from the source or fix source_feed_url.',
+			};
+		}
+		// external_id is the cross-source identity key; bound it rather than
+		// mass-assigning whatever string arrived as candidate.id.
+		let idUsable = candidate.id.length >= 1 && candidate.id.length <= 200;
+		for (const ch of candidate.id) {
+			const cp = ch.codePointAt(0) as number;
+			if (cp < 32 || cp === 127) idUsable = false; // control characters
+		}
+		if (!idUsable) {
+			return { ok: false, error: 'Candidate id is not usable as an external id.' };
+		}
+
+		const body: ServiceEventInput = {
 			organizerOrganizationId: organizerOrgId,
-			source_method: d.source_method as ServiceEventInput['source_method'],
+			source_method: method,
+			...(method === 'proxied' ? { source_feed_url: d.source_feed_url ?? undefined } : {}),
 			name: d.name,
 			start: toOffsetIso(d.start, d.timezone),
 			end: d.end ? toOffsetIso(d.end, d.timezone) : undefined,
@@ -153,10 +175,6 @@ export async function publishEventCandidate(
 			external_id: candidate.id,
 			status: 'published',
 		};
-		const body =
-			d.source_method === 'proxied' && d.source_feed_url
-				? ({ ...base, source_feed_url: d.source_feed_url } as ServiceEventInput)
-				: base;
 
 		const res = await sdk.POST('/service/events', { body });
 		if (res.data) {
