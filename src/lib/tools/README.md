@@ -11,10 +11,9 @@ Each tool is a folder; see [../../../docs/extending.md](../../../docs/extending.
 - **`rss/`** — import items from an RSS / Atom feed.
 - **`extract/`** — LLM extraction from pasted text.
 - **`scrape/`** — fetch a page and LLM-extract events (generic; write a site adapter for tricky sources).
-- **`venues/`** — bulk-import venues in an area from OpenStreetMap as organizations.
 - **`submissions/`** — moderate user-generated content from an app you operate: read its queue, approve/reject from the Review → Submissions tab. The app does any downstream publish.
 
-Calendar/sheets/rss/extract/scrape publish events as `proxied`; venues create organizations. Manual entry of organizations/events/places is the `/add` route (`self_asserted`), not a `tools/` folder.
+Calendar/sheets/rss/extract/scrape publish events as `proxied`. The bulk OpenStreetMap venue importer lives with the rest of the venue feature in `../venues/`, not here. Manual entry of organizations/events/places is the `/add` route (`self_asserted`), not a `tools/` folder.
 
 ## Operator-only
 

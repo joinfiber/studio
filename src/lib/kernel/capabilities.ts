@@ -114,7 +114,7 @@ export function getCapabilities(): Capability[] {
 			id: 'map',
 			label: 'Map view',
 			unlocks:
-				'A live map of the venue graph — Commons organizations plotted as dots (and, later, OpenStreetMap businesses to add). The data comes from the Commons + OSM; this only provides the basemap tiles.',
+				'A live map of the venue graph — Commons organizations as dots, plus the OpenStreetMap businesses around them to add or cross-check. The data comes from the Commons + OSM; this key only provides the basemap tiles.',
 			prereqs: [
 				{
 					env: 'MAPTILER_API_KEY',

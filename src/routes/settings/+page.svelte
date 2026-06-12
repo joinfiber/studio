@@ -42,7 +42,7 @@
 			{#if data.commonsConfigured}
 				<span class="ok">configured</span>
 			{:else}
-				<span class="warn">not configured — fixture-only mode</span>
+				<span class="warn">not configured — Commons reads/writes disabled</span>
 			{/if}
 		</span>
 	</div>

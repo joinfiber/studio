@@ -1,6 +1,5 @@
 /**
- * TOTP second factor — matches the current Studio's mechanism (otplib,
- * env-var secret).
+ * TOTP second factor (otplib, env-var secret).
  *
  * STUDIO_TOTP_SECRET holds the base32 seed. When set, login requires a
  * 6-digit code after the password. When unset, MFA is not enforced and the
@@ -10,7 +9,7 @@
  * Persistence note: the secret lives in env (not a DB) so it survives
  * redeploys without a volume. The cost is that enrollment ends with a
  * "set env var + redeploy" step. Full in-app persistence would need a
- * Railway volume + DB.
+ * persistent volume + DB.
  */
 
 import { authenticator } from 'otplib';

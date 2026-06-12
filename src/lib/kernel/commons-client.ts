@@ -44,9 +44,9 @@ export function createCommonsClient(): CommonsClient {
 
 	if (!apiKey && !warnedUnconfigured) {
 		console.warn(
-			'[commons] COMMONS_SERVICE_KEY is not set. Studio is running in ' +
-				'fixture-only mode; any Commons read/write will fail until you ' +
-				'configure a key. Register at https://neighborhood-commons.org/developers',
+			'[commons] COMMONS_SERVICE_KEY is not set — Studio boots, but every ' +
+				'Commons read/write is disabled until you configure a key. Register ' +
+				'at https://neighborhood-commons.org/developers',
 		);
 		warnedUnconfigured = true;
 	}
