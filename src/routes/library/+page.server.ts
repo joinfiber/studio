@@ -110,8 +110,24 @@ export const actions: Actions = {
 			description: description || null,
 			price: price || null,
 			open_window: data.get('open_window') === 'true',
-			wheelchair_accessible: data.get('wheelchair_accessible') === 'true',
 		};
+		// wheelchair_accessible is tri-state (true/false/unspecified) but renders
+		// as a checkbox, so 'unchecked' is ambiguous. The form threads the
+		// original value through a hidden field ('' = null); the PATCH only
+		// includes the field when the operator actually changed it — blindly
+		// sending `=== 'true'` used to flip 'unspecified' to false on every
+		// unrelated edit (Commons PATCH is a partial merge; omitted = unchanged).
+		const submittedWheelchair = data.get('wheelchair_accessible') === 'true';
+		const origWheelchair = data.get('wheelchair_accessible_original');
+		if (origWheelchair === null) {
+			updates.wheelchair_accessible = submittedWheelchair; // no hidden field — old client
+		} else {
+			const changed =
+				origWheelchair === ''
+					? submittedWheelchair // null original: only an explicit check asserts a value
+					: submittedWheelchair !== (origWheelchair === 'true');
+			if (changed) updates.wheelchair_accessible = submittedWheelchair;
+		}
 		if (status === 'published' || status === 'pending_review' || status === 'draft') {
 			updates.status = status;
 		}

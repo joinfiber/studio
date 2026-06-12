@@ -6,7 +6,11 @@ import { generateSecret, authUrl, checkCode, totpEnabled } from '$lib/kernel/tot
 const ENROLL_COOKIE = 'studio_enroll';
 const ENROLL_TTL = 10 * 60; // 10 min
 
-export const load: PageServerLoad = async ({ cookies }) => {
+export const load: PageServerLoad = async ({ cookies, setHeaders }) => {
+	// The freshly generated TOTP seed (and its QR) renders on this page —
+	// never let a browser or intermediary cache it.
+	setHeaders({ 'cache-control': 'no-store' });
+
 	const inProgress = cookies.get(ENROLL_COOKIE);
 	if (!inProgress) {
 		return { stage: 'idle' as const, alreadyEnabled: totpEnabled() };

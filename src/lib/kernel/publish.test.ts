@@ -209,3 +209,79 @@ describe('toOffsetIso input guards', () => {
 		expect(() => toOffsetIso('not a date', 'America/New_York')).toThrow(/Unusable date/);
 	});
 });
+
+describe('publishBatch', () => {
+	function batchCandidate(n: number): EventCandidate {
+		return {
+			id: `batch-${n}`,
+			kind: 'event',
+			status: 'pending',
+			source_tool: 'calendar',
+			created_at: '2026-06-01T12:00:00.000Z',
+			data: {
+				name: `Event ${n}`,
+				start: '2026-06-20T10:00:00',
+				timezone: 'America/New_York',
+				category: 'community',
+				location: { name: 'Hall' },
+				organizer_name: null,
+				source_method: 'proxied',
+				source_feed_url: 'https://example.com/cal.ics',
+			},
+		} as EventCandidate;
+	}
+
+	it('publishes concurrently with a bounded pool (not serially, not unbounded)', async () => {
+		let inFlight = 0;
+		let maxInFlight = 0;
+		const post = vi.fn(async (path: string) => {
+			if (path === '/service/organizations') {
+				return { data: { organization: { id: 'org-1' } }, response: { status: 201 } };
+			}
+			inFlight++;
+			maxInFlight = Math.max(maxInFlight, inFlight);
+			await new Promise((r) => setTimeout(r, 2));
+			inFlight--;
+			return { data: { event: { id: 'e' } }, response: { status: 201 } };
+		});
+		const get = vi.fn(async () => ({ data: { organizations: [] }, response: { status: 200 } }));
+		const sdk = { POST: post, GET: get } as unknown as AnySdk;
+
+		const candidates = Array.from({ length: 12 }, (_, n) => batchCandidate(n));
+		const { publishBatch } = await import('./publish.js');
+		const result = await publishBatch(sdk, candidates, 'Friends Group');
+
+		expect(result.published).toBe(12);
+		expect(result.failedCount).toBe(0);
+		expect(maxInFlight).toBeGreaterThan(1); // actually parallel
+		expect(maxInFlight).toBeLessThanOrEqual(5); // but bounded
+	});
+
+	it('collects per-event failures without aborting the batch', async () => {
+		const post = vi.fn(async (path: string, opts?: { body?: { name?: string } }) => {
+			if (path === '/service/organizations') {
+				return { data: { organization: { id: 'org-1' } }, response: { status: 201 } };
+			}
+			if (opts?.body?.name === 'Event 1') {
+				return {
+					data: undefined,
+					error: { error: { message: 'nope' } },
+					response: { status: 400 },
+				};
+			}
+			return { data: { event: { id: 'e' } }, response: { status: 201 } };
+		});
+		const get = vi.fn(async () => ({ data: { organizations: [] }, response: { status: 200 } }));
+		const sdk = { POST: post, GET: get } as unknown as AnySdk;
+
+		const { publishBatch } = await import('./publish.js');
+		const result = await publishBatch(
+			sdk,
+			Array.from({ length: 3 }, (_, n) => batchCandidate(n)),
+			'Friends Group',
+		);
+		expect(result.published).toBe(2);
+		expect(result.failedCount).toBe(1);
+		expect(result.failed[0].name).toBe('Event 1');
+	});
+});
