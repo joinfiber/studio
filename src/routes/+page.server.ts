@@ -14,6 +14,7 @@ import {
 	type StoredCandidate,
 } from '$lib/kernel/db.js';
 import { resolveOrganizerId, publishEventCandidate } from '$lib/kernel/publish.js';
+import { parseEventCandidate } from '$lib/kernel/candidate-parse.js';
 import type { EventCandidate } from '$lib/kernel/candidate.js';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -111,12 +112,11 @@ export const actions: Actions = {
 		if (!id) return fail(400, { error: 'Missing candidate id.' });
 		let candidate: EventCandidate;
 		try {
-			candidate = JSON.parse(String(data.get('candidate') ?? '')) as EventCandidate;
-		} catch {
-			return fail(400, { error: 'Could not read the edited candidate.' });
-		}
-		if (!candidate?.data?.name?.trim()) {
-			return fail(400, { error: 'A name is required.' });
+			candidate = parseEventCandidate(JSON.parse(String(data.get('candidate') ?? '')));
+		} catch (err) {
+			return fail(400, {
+				error: err instanceof Error ? err.message : 'Could not read the edited candidate.',
+			});
 		}
 		try {
 			await updateCandidate(id, candidate);
