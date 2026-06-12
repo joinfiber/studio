@@ -9,7 +9,7 @@
  */
 
 import { candidateId, type EventCandidate } from '$lib/kernel/candidate.js';
-import { assertSafeUrl, safeFetch } from '$lib/kernel/safe-fetch.js';
+import { assertSafeUrl, safeFetch, readTextCapped } from '$lib/kernel/safe-fetch.js';
 import { parseIcal } from './ical.js';
 
 export interface CalendarConfig {
@@ -87,7 +87,7 @@ export async function produceFromIcal(config: CalendarConfig): Promise<EventCand
 			`Couldn't fetch that calendar (${res.status}). If it's a Google Calendar, only "public" calendars expose an iCal feed.`,
 		);
 	}
-	const text = await res.text();
+	const text = await readTextCapped(res);
 	if (!text.includes('BEGIN:VCALENDAR')) {
 		throw new Error(
 			"That URL didn't return an iCalendar feed. If it's a Google Calendar, use the " +

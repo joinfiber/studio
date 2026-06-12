@@ -11,7 +11,7 @@
 
 import { candidateId, type EventCandidate } from '$lib/kernel/candidate.js';
 import { decodeEntities } from '$lib/kernel/html.js';
-import { safeFetch } from '$lib/kernel/safe-fetch.js';
+import { safeFetch, readTextCapped } from '$lib/kernel/safe-fetch.js';
 import { parseFeed } from './parse.js';
 
 // A feed date is a real instant (RFC-822/ISO, with an offset). Keep it as a
@@ -42,7 +42,7 @@ export async function produceFromFeed(url: string, timezone: string): Promise<Ev
 		signal: AbortSignal.timeout(20000),
 	});
 	if (!res.ok) throw new Error(`Fetch failed: ${res.status} ${res.statusText}`);
-	const xml = await res.text();
+	const xml = await readTextCapped(res);
 
 	const items = parseFeed(xml);
 	if (items.length === 0) {
