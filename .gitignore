@@ -18,3 +18,9 @@ dist/
 .vscode/
 .idea/
 *.swp
+
+# Per-machine AI-assistant settings (never shared)
+.claude/settings.local.json
+
+# Local audit scratch (reports, draft patches) — deliberately not published
+audit/
