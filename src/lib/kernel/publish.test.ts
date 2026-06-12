@@ -196,3 +196,16 @@ describe('resolveOrganizerId', () => {
 		await expect(resolveOrganizerId(sdk, '   ')).rejects.toThrow(/required/);
 	});
 });
+
+describe('toOffsetIso input guards', () => {
+	it('throws a usable error for an unknown timezone (not an opaque RangeError)', () => {
+		expect(() => toOffsetIso('2026-06-01T19:00:00', 'Eastern Standard Time')).toThrow(
+			/Unknown timezone/,
+		);
+	});
+
+	it('throws a usable error for a malformed date instead of emitting NaN-NaN-NaN', () => {
+		expect(() => toOffsetIso('2026-13-99T19:00:00', 'America/New_York')).toThrow(/Unusable date/);
+		expect(() => toOffsetIso('not a date', 'America/New_York')).toThrow(/Unusable date/);
+	});
+});

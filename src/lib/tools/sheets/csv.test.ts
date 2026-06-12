@@ -36,3 +36,22 @@ describe('parseCsv', () => {
 		expect(parseCsv('')).toEqual({ headers: [], rows: [] });
 	});
 });
+
+describe('stray quotes (RFC 4180 leniency)', () => {
+	it('treats a mid-field quote as literal text instead of swallowing the rest of the file', () => {
+		const { rows } = parseCsv(
+			'name,venue\nJoe "The Man" Smith,Hall A\nSecond Event,Hall B\nThird Event,Hall C\n',
+		);
+		expect(rows).toHaveLength(3);
+		expect(rows[0].name).toBe('Joe "The Man" Smith');
+		expect(rows[1].name).toBe('Second Event');
+		expect(rows[2].venue).toBe('Hall C');
+	});
+
+	it('still honours a properly quoted field with commas and escaped quotes', () => {
+		const { rows } = parseCsv('name,venue\n"Quiz, ""Night""",Hall A\nNext,Hall B\n');
+		expect(rows).toHaveLength(2);
+		expect(rows[0].name).toBe('Quiz, "Night"');
+		expect(rows[1].name).toBe('Next');
+	});
+});

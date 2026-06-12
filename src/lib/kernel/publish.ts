@@ -19,6 +19,7 @@
 import type { Client } from 'openapi-fetch';
 import type { paths, components } from 'neighborhood-commons';
 import type { EventCandidate, SourceMethod } from './candidate.js';
+import { normalizeCategoryKey } from './categories.js';
 
 type Sdk = Client<paths>;
 type ServiceEventInput = components['schemas']['ServiceEventInput'];
@@ -64,8 +65,22 @@ const pad = (n: number) => String(n).padStart(2, '0');
  * authoritative for DST; a one-iteration offset is fine here.
  */
 export function toOffsetIso(value: string, tz: string): string {
+	// Fail with a usable message instead of an opaque RangeError (bad zone) or
+	// a silent 'NaN-NaN-NaN…' ISO string (malformed date) — producer input is
+	// messy by nature and this error is shown per-event at publish.
+	try {
+		new Intl.DateTimeFormat('en-US', { timeZone: tz });
+	} catch {
+		throw new Error(`Unknown timezone "${tz}" — use an IANA name like America/New_York.`);
+	}
+
 	let local = value;
 	if (/^\d{4}-\d{2}-\d{2}$/.test(local)) local = `${local}T00:00:00`; // all-day → midnight
+
+	const probe = new Date(/Z$/.test(local) ? local : `${local}Z`);
+	if (Number.isNaN(probe.getTime())) {
+		throw new Error(`Unusable date/time "${value}" — expected ISO like 2026-06-20T19:00:00.`);
+	}
 
 	let instant: Date;
 	if (/Z$/.test(local)) {
@@ -163,7 +178,7 @@ export async function publishEventCandidate(
 			start: toOffsetIso(d.start, d.timezone),
 			end: d.end ? toOffsetIso(d.end, d.timezone) : undefined,
 			timezone: d.timezone,
-			category: d.category.replace(/-/g, '_'),
+			category: normalizeCategoryKey(d.category) ?? d.category.replace(/-/g, '_'),
 			location: {
 				name: d.location.name || d.name,
 				address: d.location.address ?? undefined,

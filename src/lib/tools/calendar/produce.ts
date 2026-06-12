@@ -10,7 +10,7 @@
 
 import { candidateId, type EventCandidate } from '$lib/kernel/candidate.js';
 import { assertSafeUrl, safeFetch, readTextCapped } from '$lib/kernel/safe-fetch.js';
-import { parseIcal } from './ical.js';
+import { parseIcal, type ParsedVEvent } from './ical.js';
 
 export interface CalendarConfig {
 	url: string;
@@ -95,22 +95,50 @@ export async function produceFromIcal(config: CalendarConfig): Promise<EventCand
 		);
 	}
 
+	return vEventsToCandidates(parseIcal(text), { url, defaultTz });
+}
+
+/**
+ * iCal all-day DTEND is EXCLUSIVE (a one-day event on the 4th carries DTEND
+ * of the 5th). Convert to the inclusive last day; a span that collapses to
+ * the start date becomes no end at all.
+ */
+function inclusiveAllDayEnd(endIso: string, startIso: string): string | null {
+	const d = new Date(`${endIso}T00:00:00Z`);
+	if (Number.isNaN(d.getTime())) return endIso; // malformed — surfaced at review/publish
+	d.setUTCDate(d.getUTCDate() - 1);
+	const inclusive = d.toISOString().slice(0, 10);
+	return inclusive <= startIso.slice(0, 10) ? null : inclusive;
+}
+
+/** Pure mapper from parsed VEVENTs to candidates (exported for tests). */
+export function vEventsToCandidates(
+	events: ParsedVEvent[],
+	opts: { url: string; defaultTz: string },
+): EventCandidate[] {
 	const now = new Date().toISOString();
 
-	return parseIcal(text)
+	return events
 		.filter((v) => v.summary && v.start)
 		.map((v, i) => ({
-			id: v.uid?.trim() || candidateId('calendar', i, v.summary, v.start?.iso, v.location),
+			// Content-hashed, not the raw UID: RFC 5545 recurrence instances share
+			// a UID, and a raw-UID id became a colliding external_id on publish —
+			// the exact bug candidateId() exists to prevent. The UID still seeds
+			// the hash so re-imports stay stable.
+			id: candidateId('calendar', i, v.uid, v.summary, v.start?.iso, v.location),
 			kind: 'event' as const,
 			status: 'pending' as const,
 			source_tool: 'calendar',
-			source_uri: url,
+			source_uri: opts.url,
 			created_at: now,
 			data: {
 				name: v.summary as string,
 				start: (v.start as NonNullable<typeof v.start>).iso,
-				timezone: (v.start as NonNullable<typeof v.start>).tz ?? defaultTz,
-				end: v.end?.iso ?? null,
+				timezone: (v.start as NonNullable<typeof v.start>).tz ?? opts.defaultTz,
+				end:
+					v.end?.allDay && v.start
+						? inclusiveAllDayEnd(v.end.iso, v.start.iso)
+						: (v.end?.iso ?? null),
 				category: 'community', // operator re-categorizes in review
 				description: v.description,
 				location: {
@@ -121,8 +149,8 @@ export async function produceFromIcal(config: CalendarConfig): Promise<EventCand
 				},
 				organizer_name: null,
 				image_url: null,
-				source_method: 'proxied',
-				source_feed_url: url,
+				source_method: 'proxied' as const,
+				source_feed_url: opts.url,
 			},
 		}));
 }

@@ -13,6 +13,7 @@
  */
 
 import { candidateId, type EventCandidate } from '$lib/kernel/candidate.js';
+import { normalizeCategoryKey } from '$lib/kernel/categories.js';
 import { assertSafeUrl } from '$lib/kernel/safe-fetch.js';
 
 /** Which CSV column feeds each event field. Empty string = unmapped. */
@@ -121,7 +122,7 @@ export function candidatesFromRows(
 				start: startIso,
 				timezone: opts.timezone,
 				end: endIso,
-				category: col(row, mapping.category) ?? 'community',
+				category: normalizeCategoryKey(col(row, mapping.category)) ?? 'community',
 				description: col(row, mapping.description),
 				location: {
 					name: col(row, mapping.venue) ?? '',

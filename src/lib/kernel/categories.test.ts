@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CATEGORIES } from './categories.js';
+import { CATEGORIES, normalizeCategoryKey } from './categories.js';
 
 describe('CATEGORIES', () => {
 	it('uses underscore slugs (the Commons write keys) — never kebab', () => {
@@ -17,5 +17,24 @@ describe('CATEGORIES', () => {
 		expect(slugs).toContain('open_mic');
 		expect(slugs).toContain('trivia_games');
 		expect(slugs).toContain('kids_family');
+	});
+});
+
+describe('normalizeCategoryKey', () => {
+	it('accepts the canonical underscore key', () => {
+		expect(normalizeCategoryKey('live_music')).toBe('live_music');
+	});
+
+	it('converts kebab, spaced, and mixed-case forms', () => {
+		expect(normalizeCategoryKey('live-music')).toBe('live_music');
+		expect(normalizeCategoryKey('Live Music')).toBe('live_music');
+		expect(normalizeCategoryKey('  TRIVIA-GAMES ')).toBe('trivia_games');
+	});
+
+	it('returns null for unknown or empty values', () => {
+		expect(normalizeCategoryKey('birthday-party')).toBeNull();
+		expect(normalizeCategoryKey('')).toBeNull();
+		expect(normalizeCategoryKey(null)).toBeNull();
+		expect(normalizeCategoryKey(undefined)).toBeNull();
 	});
 });
