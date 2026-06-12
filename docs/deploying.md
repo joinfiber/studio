@@ -60,10 +60,10 @@ Studio is the operator's power tool with potentially admin-level Commons access.
 
 ```bash
 STUDIO_PASSWORD=<a strong password>
-SESSION_SECRET=<optional; signs the session cookie, falls back to the password>
+SESSION_SECRET=<recommended; a distinct high-entropy value, e.g. `openssl rand -hex 32`>
 ```
 
-- With `STUDIO_PASSWORD` set: every route requires a valid session. Users hit a login page; a correct password issues a signed, 7-day, HTTP-only cookie.
+- With `STUDIO_PASSWORD` set: every route requires a valid session. Users hit a login page; a correct password issues a signed, 7-day, HTTP-only cookie. The cookie is signed with `SESSION_SECRET`; if you don't set one, Studio generates a random signing key at boot — everything works, but every restart/redeploy signs you out. (The password is never used as the signing key.)
 - Without it on **localhost**: the gate is off (local-dev convenience), with a loud startup warning.
 - Without it on a **non-local host**: Studio **fails closed** — every route returns 503 — so a public deploy that forgot the password serves nothing rather than an open admin surface. Set `STUDIO_ALLOW_OPEN=true` only if you intentionally want an open instance (e.g. behind your own network auth).
 
