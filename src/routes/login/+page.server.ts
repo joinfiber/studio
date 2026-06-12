@@ -10,6 +10,12 @@ import {
 	verifyToken,
 } from '$lib/kernel/session';
 import { totpEnabled, verifyTotp } from '$lib/kernel/totp';
+import { checkThrottle, recordFailure, recordSuccess } from '$lib/kernel/login-throttle';
+
+function throttled(step: 'password' | 'totp', retryAfterMs: number) {
+	const seconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
+	return fail(429, { step, error: `Too many failed attempts. Try again in ${seconds}s.` });
+}
 
 export const load: PageServerLoad = () => {
 	if (!gateEnabled()) {
@@ -20,17 +26,22 @@ export const load: PageServerLoad = () => {
 
 export const actions: Actions = {
 	password: async ({ request, cookies, url }) => {
+		const throttle = checkThrottle();
+		if (!throttle.ok) return throttled('password', throttle.retryAfterMs);
+
 		const data = await request.formData();
 		const password = String(data.get('password') ?? '');
 
 		if (!checkPassword(password)) {
+			await recordFailure(); // tarpit grows with the streak; lockout past 10
 			return fail(401, { step: 'password' as const, error: 'Incorrect password.' });
 		}
 
 		const secure = url.protocol === 'https:';
 
 		if (totpEnabled()) {
-			// Password OK — issue a short-lived partial session, move to the code step.
+			// Password OK — issue a short-lived partial session, move to the code
+			// step. The streak isn't reset yet; MFA must also pass.
 			cookies.set(COOKIE_NAME, issueToken('password', PARTIAL_TTL_SECONDS), {
 				path: '/',
 				httpOnly: true,
@@ -42,6 +53,7 @@ export const actions: Actions = {
 		}
 
 		// No MFA configured yet — full session. The layout nudges enrollment.
+		recordSuccess();
 		cookies.set(COOKIE_NAME, issueToken('full'), {
 			path: '/',
 			httpOnly: true,
@@ -58,13 +70,20 @@ export const actions: Actions = {
 			return fail(401, { step: 'password' as const, error: 'Session expired. Start over.' });
 		}
 
+		// Same global throttle as the password step, so the partial cookie is
+		// not an unlimited code oracle: guesses share the streak/lockout budget.
+		const throttle = checkThrottle();
+		if (!throttle.ok) return throttled('totp', throttle.retryAfterMs);
+
 		const data = await request.formData();
 		const code = String(data.get('code') ?? '');
 
 		if (!verifyTotp(code)) {
+			await recordFailure();
 			return fail(401, { step: 'totp' as const, error: 'Invalid code.' });
 		}
 
+		recordSuccess();
 		cookies.set(COOKIE_NAME, issueToken('full'), {
 			path: '/',
 			httpOnly: true,

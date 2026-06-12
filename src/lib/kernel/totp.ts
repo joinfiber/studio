@@ -20,12 +20,31 @@ export function totpEnabled(): boolean {
 	return !!env.STUDIO_TOTP_SECRET;
 }
 
+/**
+ * Accepted codes are single-use: re-presenting the same code while it could
+ * still be valid is rejected (RFC 6238 §5.2 — blocks replay of a shoulder-
+ * surfed or intercepted code). In-process state; a restart forgets it, but a
+ * restart also outlives the 30s code window.
+ */
+let lastAccepted: { code: string; at: number } | null = null;
+const REPLAY_WINDOW_MS = 90_000; // covers the step ± otplib's check window
+
 /** Verify a code against the configured STUDIO_TOTP_SECRET. */
 export function verifyTotp(code: string): boolean {
 	const secret = env.STUDIO_TOTP_SECRET;
 	if (!secret) return false;
+	const trimmed = code.trim();
+	if (
+		lastAccepted &&
+		lastAccepted.code === trimmed &&
+		Date.now() - lastAccepted.at < REPLAY_WINDOW_MS
+	) {
+		return false;
+	}
 	try {
-		return authenticator.check(code.trim(), secret);
+		const ok = authenticator.check(trimmed, secret);
+		if (ok) lastAccepted = { code: trimmed, at: Date.now() };
+		return ok;
 	} catch {
 		return false;
 	}
