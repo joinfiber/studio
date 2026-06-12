@@ -27,6 +27,30 @@ const UNCONFIGURED =
 	'gate (or STUDIO_ALLOW_OPEN=true to intentionally run open). Refusing to serve an open ' +
 	'admin surface on a public host.';
 
+/**
+ * Baseline security headers on every response. Studio is an admin surface
+ * with a privileged key behind it, so the defaults are deny-shaped:
+ *
+ * - X-Frame-Options + CSP frame-ancestors: no framing → no clickjacking the
+ *   logged-in operator into privileged writes (belt & braces: older browsers
+ *   honour X-Frame-Options, modern ones the CSP directive).
+ * - X-Content-Type-Options: no MIME sniffing.
+ * - Referrer-Policy: never leak the deployment URL to third parties.
+ * - HSTS: https only, so local HTTP dev isn't poisoned.
+ *
+ * A full script-src CSP is deferred: maplibre-gl needs worker-src blob: (and
+ * friends) mapped out first; frame-ancestors alone can't break anything.
+ */
+function applySecurityHeaders(headers: Headers, protocol: string): void {
+	headers.set('X-Frame-Options', 'DENY');
+	headers.set('Content-Security-Policy', "frame-ancestors 'none'");
+	headers.set('X-Content-Type-Options', 'nosniff');
+	headers.set('Referrer-Policy', 'no-referrer');
+	if (protocol === 'https:') {
+		headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
+	}
+}
+
 export const handle: Handle = async ({ event, resolve }) => {
 	if (commonsClient === null) commonsClient = createCommonsClient();
 	if (isAdminFlag === null) isAdminFlag = isAdminInstance();
@@ -55,10 +79,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 		// privileged surface to the internet.
 		const openOk = isLoopback(event.url.hostname) || env.STUDIO_ALLOW_OPEN === 'true';
 		if (!openOk && !isAsset) {
-			return new Response(UNCONFIGURED, { status: 503, headers: { 'content-type': 'text/plain' } });
+			const headers = new Headers({ 'content-type': 'text/plain' });
+			applySecurityHeaders(headers, event.url.protocol);
+			return new Response(UNCONFIGURED, { status: 503, headers });
 		}
 		event.locals.authed = true;
 	}
 
-	return resolve(event);
+	const response = await resolve(event);
+	applySecurityHeaders(response.headers, event.url.protocol);
+	return response;
 };

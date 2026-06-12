@@ -3,13 +3,7 @@ import { createHmac } from 'node:crypto';
 // Import the stub directly: under vitest, `$env/dynamic/private` is aliased to
 // this same file, so the `env` object here IS the one session.ts reads.
 import { env, clearEnv } from '$lib/test/env-stub.js';
-import {
-	issueToken,
-	verifyToken,
-	checkPassword,
-	gateEnabled,
-	isLoopback,
-} from './session.js';
+import { issueToken, verifyToken, checkPassword, gateEnabled, isLoopback } from './session.js';
 
 beforeEach(clearEnv);
 
