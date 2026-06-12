@@ -32,6 +32,9 @@
 		ingestedQueue = [...data.ingested];
 	});
 	const ingestedCount = $derived(ingestedQueue.length);
+	// In-flight action per row, so the highest-frequency buttons show progress
+	// and can't double-submit during the Commons round-trip.
+	let busy = $state<Record<string, string>>({});
 	function removeIngested(id: number) {
 		ingestedQueue = ingestedQueue.filter((c) => c.id !== id);
 	}
@@ -159,18 +162,23 @@
 								<form
 									method="POST"
 									action="?/approve"
-									use:enhance={() =>
-										async ({ result }) => {
+									use:enhance={() => {
+										busy[s.id] = 'approve';
+										return async ({ result }) => {
+											delete busy[s.id];
 											if (result.type === 'success') {
 												toast.push(`Approved: ${s.content}`, 'success');
 												removeFromQueue(s.id);
 											} else if (result.type === 'failure') {
 												toast.push(String(result.data?.error ?? 'Approve failed.'), 'error');
 											}
-										}}
+										};
+									}}
 								>
 									<input type="hidden" name="id" value={s.id} />
-									<button type="submit" class="primary">Approve</button>
+									<button type="submit" class="primary" disabled={!!busy[s.id]}>
+										{busy[s.id] === 'approve' ? 'Approving…' : 'Approve'}
+									</button>
 								</form>
 								<button
 									class="danger-outline"
@@ -250,36 +258,50 @@
 						<form
 							method="POST"
 							action="?/queuePublish"
-							use:enhance={() =>
-								async ({ result }) => {
+							use:enhance={() => {
+								busy[c.id] = 'publish';
+								return async ({ result }) => {
+									delete busy[c.id];
 									if (result.type === 'success') {
-										toast.push(`Published: ${c.candidate.data.name}`, 'success');
+										const warning = result.data?.warning;
+										if (warning) toast.push(String(warning), 'error', 9000);
+										else toast.push(`Published: ${c.candidate.data.name}`, 'success');
 										removeIngested(c.id);
 									} else if (result.type === 'failure') {
 										toast.push(String(result.data?.error ?? 'Publish failed.'), 'error', 6000);
 									}
-								}}
+								};
+							}}
 						>
 							<input type="hidden" name="id" value={c.id} />
-							<button type="submit" class="primary" disabled={!data.commonsConfigured}
-								>Publish</button
+							<button
+								type="submit"
+								class="primary"
+								disabled={!data.commonsConfigured || !!busy[c.id]}
 							>
+								{busy[c.id] === 'publish' ? 'Publishing…' : 'Publish'}
+							</button>
 						</form>
 						<form
 							method="POST"
 							action="?/queueReject"
-							use:enhance={() =>
-								async ({ result }) => {
+							use:enhance={() => {
+								busy[c.id] = 'reject';
+								return async ({ result }) => {
+									delete busy[c.id];
 									if (result.type === 'success') {
 										toast.push('Removed from queue.', 'success');
 										removeIngested(c.id);
 									} else if (result.type === 'failure') {
 										toast.push(String(result.data?.error ?? 'Reject failed.'), 'error');
 									}
-								}}
+								};
+							}}
 						>
 							<input type="hidden" name="id" value={c.id} />
-							<button type="submit" class="danger-outline">Reject</button>
+							<button type="submit" class="danger-outline" disabled={!!busy[c.id]}>
+								{busy[c.id] === 'reject' ? 'Removing…' : 'Reject'}
+							</button>
 						</form>
 					</div>
 				{/if}

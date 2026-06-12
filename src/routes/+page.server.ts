@@ -99,11 +99,25 @@ export const actions: Actions = {
 			const orgId = await resolveOrganizerId(commons.sdk, organizer);
 			const result = await publishEventCandidate(commons.sdk, row.candidate, orgId);
 			if (!result.ok) return fail(400, { error: result.error ?? 'Publish failed.' });
-			await deleteCandidate(id); // published → leaves the queue
-			return { ok: true, id, action: 'published' as const };
 		} catch (err) {
 			return fail(400, { error: err instanceof Error ? err.message : 'Publish failed.' });
 		}
+
+		// Published. The queue delete is housekeeping — if only IT fails, say
+		// that honestly instead of 'Publish failed': the event is already live,
+		// and a retried publish would create a duplicate.
+		try {
+			await deleteCandidate(id);
+		} catch {
+			return {
+				ok: true,
+				id,
+				action: 'published' as const,
+				warning:
+					'Published to the Commons, but the queue row could not be removed — clear it with Reject; do not publish it again.',
+			};
+		}
+		return { ok: true, id, action: 'published' as const };
 	},
 
 	queueUpdate: async ({ request }) => {
@@ -119,7 +133,10 @@ export const actions: Actions = {
 			});
 		}
 		try {
-			await updateCandidate(id, candidate);
+			const updated = await updateCandidate(id, candidate);
+			if (!updated) {
+				return fail(404, { error: 'That candidate is no longer in the queue.' });
+			}
 			return { ok: true, id, action: 'updated' as const };
 		} catch (err) {
 			return fail(400, { error: err instanceof Error ? err.message : 'Save failed.' });

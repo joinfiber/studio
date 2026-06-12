@@ -61,7 +61,9 @@ function initClient(): Promise<Client> {
 		// e.g. a file: path whose directory doesn't exist (wrong volume mount).
 		// Don't take the store (and every review write) down — fall back to
 		// in-memory and surface a precise warning instead of a 500.
-		const safe = url.replace(/\/\/[^@/]*@/, '//***@'); // redact any user:pass in the URL
+		const safe = url
+			.replace(/\/\/[^@/]*@/, '//***@') // redact any user:pass in the URL
+			.replace(/([?&]authToken=)[^&]+/i, '$1***'); // ...and a libsql authToken
 		dbWarning = `couldn't open ${safe} — check the volume mount path; reviews are in-memory and won't persist`;
 		console.error(`[db] ${dbWarning}:`, err);
 		client = createClient({ url: ':memory:' });
@@ -140,7 +142,18 @@ export async function listCandidates(status = 'pending'): Promise<StoredCandidat
 		      FROM candidates WHERE status = ? ORDER BY created_at ASC, id ASC`,
 		args: [status],
 	});
-	return res.rows.map((r) => rowToStored(r as unknown as Record<string, unknown>));
+	// One unreadable row must not blank the whole queue: skip it (loudly) and
+	// keep serving the rest. The bad row stays deletable via queueReject,
+	// which never parses the payload.
+	const out: StoredCandidate[] = [];
+	for (const r of res.rows) {
+		try {
+			out.push(rowToStored(r as unknown as Record<string, unknown>));
+		} catch (err) {
+			console.error(`[db] skipping unreadable candidate row ${String(r.id)}:`, err);
+		}
+	}
+	return out;
 }
 
 export async function getCandidate(id: number): Promise<StoredCandidate | null> {
@@ -151,17 +164,26 @@ export async function getCandidate(id: number): Promise<StoredCandidate | null> 
 		args: [id],
 	});
 	const row = res.rows[0];
-	return row ? rowToStored(row as unknown as Record<string, unknown>) : null;
+	if (!row) return null;
+	try {
+		return rowToStored(row as unknown as Record<string, unknown>);
+	} catch (err) {
+		console.error(`[db] candidate row ${id} is unreadable:`, err);
+		return null;
+	}
 }
 
-/** Replace a queued candidate's payload after an inline edit in review. */
-export async function updateCandidate(id: number, candidate: EventCandidate): Promise<void> {
+/** Replace a queued candidate's payload after an inline edit in review.
+ *  Returns false when the row no longer exists (so the UI can say so
+ *  instead of reporting a save that wrote nothing). */
+export async function updateCandidate(id: number, candidate: EventCandidate): Promise<boolean> {
 	const client = await getClient();
 	const organizer = (candidate.data.organizer_name ?? '').trim() || null;
-	await client.execute({
+	const res = await client.execute({
 		sql: `UPDATE candidates SET data = ?, organizer = ?, kind = ?, source_tool = ? WHERE id = ?`,
 		args: [JSON.stringify(candidate), organizer, candidate.kind, candidate.source_tool, id],
 	});
+	return res.rowsAffected > 0;
 }
 
 export async function deleteCandidate(id: number): Promise<void> {

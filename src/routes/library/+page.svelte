@@ -317,7 +317,13 @@
 											name="wheelchair_accessible"
 											value="true"
 											bind:checked={draft.wheelchairAccessible}
-										/> wheelchair accessible
+										/>
+										wheelchair accessible
+										<input
+											type="hidden"
+											name="wheelchair_accessible_original"
+											value={ev.wheelchairAccessible == null ? '' : String(ev.wheelchairAccessible)}
+										/>
 									</label>
 									{#if ev.sourceFeedUrl}
 										<a class="src" href={ev.sourceFeedUrl} target="_blank" rel="noopener noreferrer"

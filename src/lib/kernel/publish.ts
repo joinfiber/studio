@@ -206,6 +206,8 @@ export async function publishEventCandidate(
 	}
 }
 
+const PUBLISH_CONCURRENCY = 5;
+
 export interface BatchResult {
 	published: number;
 	failedCount: number;
@@ -225,11 +227,23 @@ export async function publishBatch(
 	const organizerOrgId = await resolveOrganizerId(sdk, organizerName);
 	const failed: { name: string; error: string }[] = [];
 	let published = 0;
-	for (const candidate of candidates) {
-		const result = await publishEventCandidate(sdk, candidate, organizerOrgId);
-		if (result.ok) published += 1;
-		else
-			failed.push({ name: candidate.data?.name ?? candidate.id, error: result.error ?? 'failed' });
-	}
+	// A small worker pool instead of await-in-loop: a 200-event import was 200
+	// sequential round-trips. Bounded so a big batch can't stampede the Commons.
+	let next = 0;
+	const worker = async () => {
+		while (next < candidates.length) {
+			const candidate = candidates[next++];
+			const result = await publishEventCandidate(sdk, candidate, organizerOrgId);
+			if (result.ok) published += 1;
+			else
+				failed.push({
+					name: candidate.data?.name ?? candidate.id,
+					error: result.error ?? 'failed',
+				});
+		}
+	};
+	await Promise.all(
+		Array.from({ length: Math.min(PUBLISH_CONCURRENCY, candidates.length) }, worker),
+	);
 	return { published, failedCount: failed.length, failed: failed.slice(0, 10) };
 }

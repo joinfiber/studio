@@ -107,3 +107,19 @@ describe('org review overlay', () => {
 		expect(after).not.toContain('org-review-b');
 	});
 });
+
+describe('robustness', () => {
+	it('updateCandidate reports false for a row that no longer exists', async () => {
+		expect(await updateCandidate(999999, mk('ghost-1', 'Ghost'))).toBe(false);
+	});
+
+	it('updateCandidate reports true for a real row', async () => {
+		await saveCandidates([mk('upd-1', 'Updatable')]);
+		const row = (await listCandidates()).find((r) => r.candidate.id === 'upd-1');
+		expect(row).toBeDefined();
+		if (row) {
+			expect(await updateCandidate(row.id, mk('upd-1', 'Updated name'))).toBe(true);
+			await deleteCandidate(row.id);
+		}
+	});
+});
