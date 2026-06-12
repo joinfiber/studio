@@ -9,7 +9,7 @@
  */
 
 import { env } from '$env/dynamic/private';
-import { CATEGORIES } from '$lib/kernel/categories.js';
+import { CATEGORIES, normalizeCategoryKey } from '$lib/kernel/categories.js';
 
 const DEFAULT_URL = 'https://api.deepinfra.com/v1/openai';
 const DEFAULT_MODEL = 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo';
@@ -41,12 +41,12 @@ function systemPrompt(today: string): string {
 	].join('\n');
 }
 
-const VALID = new Set(CATEGORIES.map((c) => c.slug));
-
 function normalizeCategory(c: string | null | undefined): string | null {
 	if (!c) return null;
-	const slug = c.trim().toLowerCase();
-	return VALID.has(slug) ? slug : 'community';
+	// Models return kebab, underscore, or spaced forms interchangeably; the
+	// central normalizer accepts all three. Unknown values land in 'community'
+	// for the operator to re-categorize in review.
+	return normalizeCategoryKey(c) ?? 'community';
 }
 
 function parseContent(content: string): ExtractedEvent[] {

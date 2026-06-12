@@ -68,17 +68,78 @@ function parsePropLine(line: string): PropLine | null {
 	return { name, params, value };
 }
 
+/**
+ * Outlook/Exchange feeds put Windows display names in TZID ("Eastern
+ * Standard Time"), which are not IANA zones — passed raw they make
+ * Intl.DateTimeFormat throw at publish and take the whole feed down with a
+ * RangeError. Valid IANA passes through; the common Windows names map to
+ * their IANA zone (so those feeds get the RIGHT time, not a fallback);
+ * anything else becomes null and callers fall back to the import's default
+ * timezone.
+ */
+const WINDOWS_TO_IANA: Record<string, string> = {
+	'Hawaiian Standard Time': 'Pacific/Honolulu',
+	'Alaskan Standard Time': 'America/Anchorage',
+	'Pacific Standard Time': 'America/Los_Angeles',
+	'Mountain Standard Time': 'America/Denver',
+	'US Mountain Standard Time': 'America/Phoenix',
+	'Central Standard Time': 'America/Chicago',
+	'Eastern Standard Time': 'America/New_York',
+	'US Eastern Standard Time': 'America/Indiana/Indianapolis',
+	'Atlantic Standard Time': 'America/Halifax',
+	'GMT Standard Time': 'Europe/London',
+	'W. Europe Standard Time': 'Europe/Berlin',
+	'Central Europe Standard Time': 'Europe/Budapest',
+	'Central European Standard Time': 'Europe/Warsaw',
+	'Romance Standard Time': 'Europe/Paris',
+	'India Standard Time': 'Asia/Kolkata',
+	'China Standard Time': 'Asia/Shanghai',
+	'Tokyo Standard Time': 'Asia/Tokyo',
+	'AUS Eastern Standard Time': 'Australia/Sydney',
+	'New Zealand Standard Time': 'Pacific/Auckland',
+};
+
+function isIanaZone(tz: string): boolean {
+	try {
+		new Intl.DateTimeFormat('en-US', { timeZone: tz });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+export function normalizeTzid(tzid: string | undefined): string | null {
+	if (!tzid) return null;
+	const t = tzid.trim().replace(/^"|"$/g, '');
+	if (!t) return null;
+	if (WINDOWS_TO_IANA[t]) return WINDOWS_TO_IANA[t];
+	return isIanaZone(t) ? t : null;
+}
+
+const inRange = (s: string, lo: number, hi: number) => Number(s) >= lo && Number(s) <= hi;
+
 function parseDate(p: PropLine): ParsedDate | null {
 	const v = p.value.trim();
 	if (p.params.VALUE === 'DATE' || /^\d{8}$/.test(v)) {
 		const m = /^(\d{4})(\d{2})(\d{2})$/.exec(v);
 		if (!m) return null;
+		// Out-of-range digits would survive review and then blow up at publish.
+		if (!inRange(m[2], 1, 12) || !inRange(m[3], 1, 31)) return null;
 		return { iso: `${m[1]}-${m[2]}-${m[3]}`, tz: null, allDay: true };
 	}
 	const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z)?$/.exec(v);
 	if (!m) return null;
 	const [, y, mo, d, h, mi, s, z] = m;
-	const tz = p.params.TZID ?? (z ? 'UTC' : null);
+	if (
+		!inRange(mo, 1, 12) ||
+		!inRange(d, 1, 31) ||
+		!inRange(h, 0, 23) ||
+		!inRange(mi, 0, 59) ||
+		!inRange(s, 0, 60) // 60 = leap second
+	) {
+		return null;
+	}
+	const tz = z ? 'UTC' : normalizeTzid(p.params.TZID);
 	const local = `${y}-${mo}-${d}T${h}:${mi}:${s}`;
 	return { iso: z ? `${local}Z` : local, tz, allDay: false };
 }

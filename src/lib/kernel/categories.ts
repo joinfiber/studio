@@ -35,3 +35,20 @@ export const CATEGORIES: readonly CategoryOption[] = [
 	{ slug: 'community', label: 'Community' },
 	{ slug: 'spectator', label: 'Spectator' },
 ] as const;
+
+const SLUGS: ReadonlySet<string> = new Set(CATEGORIES.map((c) => c.slug));
+
+/**
+ * Normalize a free-form category string (kebab/underscore/spaces, any case)
+ * to its canonical Commons key, or null when it isn't one. The
+ * underscore-on-write invariant lives HERE — every write sink (publish,
+ * LLM extraction, sheets mapping) uses this instead of reimplementing it.
+ */
+export function normalizeCategoryKey(input: string | null | undefined): string | null {
+	if (!input) return null;
+	const key = input
+		.trim()
+		.toLowerCase()
+		.replace(/[\s-]+/g, '_');
+	return SLUGS.has(key) ? key : null;
+}

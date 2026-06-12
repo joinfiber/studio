@@ -30,7 +30,10 @@ export function parseCsv(text: string): ParsedCsv {
 			} else {
 				field += ch;
 			}
-		} else if (ch === '"') {
+		} else if (ch === '"' && field === '') {
+			// Opening quote only at field start (RFC 4180). A stray quote mid-field
+			// is literal text -- treating it as an opener used to swallow the whole
+			// rest of the file into one field (silent multi-row data loss).
 			inQuotes = true;
 		} else if (ch === ',') {
 			record.push(field);

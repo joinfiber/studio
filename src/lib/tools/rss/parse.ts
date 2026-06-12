@@ -17,6 +17,9 @@ const parser = new XMLParser({
 	ignoreAttributes: false,
 	attributeNamePrefix: '@_',
 	trimValues: true,
+	// Keep values as strings: the default coercion turns a title of "007"
+	// into the number 7 and a title of "true" into a boolean (then dropped).
+	parseTagValue: false,
 });
 
 function asArray<T>(v: T | T[] | undefined | null): T[] {

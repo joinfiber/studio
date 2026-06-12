@@ -45,3 +45,19 @@ describe('parseFeed', () => {
 		expect(parseFeed('<html><body>nope</body></html>')).toEqual([]);
 	});
 });
+
+describe('value coercion is off (titles stay strings)', () => {
+	it('preserves a numeric-looking title with leading zeros', () => {
+		const xml = `<?xml version="1.0"?><rss version="2.0"><channel>
+			<item><title>007</title><link>https://x.example/a</link></item>
+		</channel></rss>`;
+		expect(parseFeed(xml)[0].title).toBe('007');
+	});
+
+	it('preserves boolean-looking titles instead of dropping them', () => {
+		const xml = `<?xml version="1.0"?><rss version="2.0"><channel>
+			<item><title>true</title><link>https://x.example/b</link></item>
+		</channel></rss>`;
+		expect(parseFeed(xml)[0].title).toBe('true');
+	});
+});
