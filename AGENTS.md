@@ -81,13 +81,14 @@ Copy its shape. To add a source named `mysource`:
    ```
 
 2. **Fetch user URLs safely.** For any operator-supplied URL, use `assertSafeUrl` /
-   `safeFetch` from `$lib/kernel/safe-fetch.js` (blocks private/internal hosts and
-   re-checks redirects).
+   `safeFetch` from `$lib/kernel/safe-fetch.js` (blocks private/internal hosts,
+   re-checks redirects and DNS), and read bodies with `readTextCapped`.
 
 3. **Route** — `src/routes/sources/mysource/+page.server.ts` with two actions,
    mirroring calendar's: a `fetch` action that runs your producer and returns the
-   candidates, and a `publish` action that calls `publishBatch` from
-   `$lib/kernel/publish.js`. Add `+page.svelte` for the UI (copy calendar's).
+   candidates, and `publish: publishSourceAction` (the shared, validated publish
+   path from `$lib/kernel/publish-action.js` — don't hand-roll your own).
+   Add `+page.svelte` for the UI (copy calendar's).
 
 4. **List it** — add the source to the `/sources` index page.
 

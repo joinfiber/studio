@@ -52,7 +52,7 @@ export interface EventCandidate extends CandidateBase {
 		start: string; // ISO 8601 with offset
 		timezone: string; // IANA
 		end?: string | null;
-		category: string; // kebab-case slug from Commons taxonomy
+		category: string; // Commons category key, underscore form (e.g. 'live_music'); kebab is read-side only
 		description?: string | null;
 		location: {
 			name: string;

@@ -46,7 +46,7 @@ pnpm build
 pnpm start
 ```
 
-The build is a standard Node.js server (adapter-node). Deploy to Railway, Render, Fly, Vercel, or anywhere Node runs.
+The build is a standard long-running Node.js server (adapter-node). Deploy to Railway, Render, Fly.io, or anywhere a Node process runs. (Serverless platforms like Vercel need a different SvelteKit adapter than the bundled adapter-node.)
 
 ## Database
 
@@ -71,7 +71,7 @@ The gate is single-password by design — Studio is a single-operator tool. Sign
 
 ### MFA (optional second factor)
 
-Matches the current Studio's TOTP mechanism. When `STUDIO_TOTP_SECRET` is set, login requires a 6-digit authenticator code after the password.
+When `STUDIO_TOTP_SECRET` is set, login requires a 6-digit authenticator code after the password.
 
 To enroll:
 

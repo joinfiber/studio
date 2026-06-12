@@ -1,0 +1,5 @@
+# Normalize line endings to LF on checkout everywhere, so Prettier
+# (endOfLine: lf, its default) agrees with git on every platform — without
+# this, Windows clones with core.autocrlf=true see `pnpm format:check`
+# failures on files they never touched.
+* text=auto eol=lf

@@ -1,6 +1,6 @@
 /**
  * LLM event extraction. Calls an OpenAI-compatible chat endpoint (DeepInfra
- * by default, matching the current Studio) to pull structured events out of
+ * by default) to pull structured events out of
  * unstructured text — newsletter bodies, pasted listings, scraped pages.
  *
  * Bring-your-own-key: reads INFERENCE_API_KEY from env. Studio ships none.

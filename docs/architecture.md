@@ -23,7 +23,7 @@ Clone-baseline programs that ship in every deployment. Each tool:
 
 Add a tool by creating `src/lib/tools/your-tool-name/` with a candidate producer. See [extending.md](extending.md).
 
-Baseline tools: `calendar/`, `sheets/`, `rss/`, `extract/`, `scrape/`, `venues/`, `submissions/`. (Manual entry of orgs/events/places is the `/add` route, not a `tools/` folder; library management is `/library`.)
+Baseline tools: `calendar/`, `sheets/`, `rss/`, `extract/`, `scrape/`, `submissions/`. (The bulk venue importer lives with the rest of the venue feature in `src/lib/venues/` — see below. Manual entry of orgs/events/places is the `/add` route, not a `tools/` folder; library management is `/library`.)
 
 ## The instance (`src/lib/instance/`)
 
