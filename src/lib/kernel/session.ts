@@ -7,8 +7,10 @@
  *
  * Model: one shared password (STUDIO_PASSWORD env). On correct entry the
  * server issues a signed, expiring cookie. The cookie is a stateless signed
- * token (HMAC-SHA256 over `expiry:level`) — no session store needed,
- * survives restarts, can't be forged without the secret.
+ * token (HMAC-SHA256 over `expiry:level`) — no session store needed, can't
+ * be forged without the signing key. With SESSION_SECRET set, sessions also
+ * survive restarts; without it the key is a per-process random value and a
+ * restart/redeploy signs everyone out.
  *
  * Two levels:
  * - 'password' — password verified, awaiting TOTP (short-lived). Only used
@@ -25,7 +27,7 @@
  *   wants an open instance opts in with STUDIO_ALLOW_OPEN=true.
  */
 
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { env } from '$env/dynamic/private';
 
 export const COOKIE_NAME = 'studio_session';
@@ -36,8 +38,30 @@ export type SessionLevel = 'password' | 'full';
 
 let warnedOpen = false;
 
+let runtimeSecret: string | null = null;
+
+/**
+ * HMAC key for session tokens: SESSION_SECRET, else a random per-process key.
+ *
+ * The login password is deliberately NOT a fallback — signing with it would
+ * let anyone who knows (or brute-forces) the password mint a 'full' token
+ * directly, silently bypassing TOTP. And an empty key would make tokens
+ * forgeable by anyone. The cost of the ephemeral fallback is only that a
+ * restart/redeploy signs the operator out.
+ */
 function secret(): string {
-	return env.SESSION_SECRET ?? env.STUDIO_PASSWORD ?? '';
+	if (env.SESSION_SECRET) return env.SESSION_SECRET;
+	if (runtimeSecret === null) {
+		runtimeSecret = randomBytes(32).toString('hex');
+		if (env.STUDIO_PASSWORD) {
+			console.warn(
+				'[auth] SESSION_SECRET is not set — sessions are signed with a per-process ' +
+					'random key and reset on every restart/redeploy. Set SESSION_SECRET to a ' +
+					'distinct high-entropy value (e.g. `openssl rand -hex 32`) for stable sessions.',
+			);
+		}
+	}
+	return runtimeSecret;
 }
 
 export function gateEnabled(): boolean {
