@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import type { EventCandidate } from '$lib/kernel/candidate.js';
-import { assertSafeUrl, safeFetch } from '$lib/kernel/safe-fetch.js';
+import { assertSafeUrl, safeFetch, readTextCapped } from '$lib/kernel/safe-fetch.js';
 import { parseCsv } from '$lib/tools/sheets/csv.js';
 import { normalizeSheetUrl } from '$lib/tools/sheets/produce.js';
 import { publishBatch } from '$lib/kernel/publish.js';
@@ -27,7 +27,7 @@ export const actions: Actions = {
 					error: `Fetch failed: ${res.status}. Is the sheet published / link-shared?`,
 				});
 			}
-			const text = await res.text();
+			const text = await readTextCapped(res);
 			if (/^\s*<(?:!doctype|html)/i.test(text)) {
 				return fail(400, {
 					error:

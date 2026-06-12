@@ -12,7 +12,7 @@
  */
 
 import type { EventCandidate } from '$lib/kernel/candidate.js';
-import { assertSafeUrl, safeFetch } from '$lib/kernel/safe-fetch.js';
+import { assertSafeUrl, safeFetch, readTextCapped } from '$lib/kernel/safe-fetch.js';
 import { extractEventsFromText } from '$lib/tools/extract/llm.js';
 import { candidatesFromExtracted } from '$lib/tools/extract/produce.js';
 import { commonsUserAgent } from '$lib/kernel/commons-client.js';
@@ -47,7 +47,7 @@ export async function scrapeAndExtract(
 	});
 	if (!res.ok) throw new Error(`Fetch failed: ${res.status} ${res.statusText}`);
 
-	const html = await res.text();
+	const html = await readTextCapped(res);
 	const text = htmlToText(html);
 	if (text.length < 40) throw new Error('No readable text found on that page.');
 
