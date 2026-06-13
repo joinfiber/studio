@@ -42,10 +42,22 @@
 	let searching = $state(false);
 	let picked = $state<{ lat: number; lng: number; addressJson: string } | null>(null);
 	let searchTimer: ReturnType<typeof setTimeout> | undefined;
+	// Sequence + abort so a slow earlier response can't overwrite a newer one
+	// (or leave the "Searching…" spinner stuck after a later search resolves).
+	let searchSeq = 0;
+	let searchAbort: AbortController | undefined;
 
 	function clearSuggest() {
 		commonsMatches = [];
 		osmMatches = [];
+	}
+
+	/** Invalidate any in-flight search so its result is ignored. */
+	function cancelSearch() {
+		searchSeq++;
+		searchAbort?.abort();
+		searchAbort = undefined;
+		searching = false;
 	}
 
 	function resetForm() {
@@ -56,7 +68,7 @@
 		orgSameAs = '';
 		picked = null;
 		clearTimeout(searchTimer);
-		searching = false;
+		cancelSearch();
 		clearSuggest();
 	}
 
@@ -70,6 +82,7 @@
 		picked = null; // editing the name invalidates a prior OSM pick
 		clearTimeout(searchTimer);
 		if (value.trim().length < 2) {
+			cancelSearch();
 			clearSuggest();
 			return;
 		}
@@ -77,16 +90,24 @@
 	}
 
 	async function runSearch(q: string) {
+		const seq = ++searchSeq;
+		searchAbort?.abort(); // cancel the prior in-flight request
+		const ac = new AbortController();
+		searchAbort = ac;
 		searching = true;
 		try {
-			const res = await fetch(`/add/search?kind=${kind}&q=${encodeURIComponent(q)}`);
+			const res = await fetch(`/add/search?kind=${kind}&q=${encodeURIComponent(q)}`, {
+				signal: ac.signal,
+			});
 			const d = (await res.json()) as { commons: CommonsMatch[]; osm: OsmMatch[] };
+			if (seq !== searchSeq) return; // a newer search superseded this one
 			commonsMatches = d.commons ?? [];
 			osmMatches = d.osm ?? [];
-		} catch {
-			clearSuggest();
+		} catch (err) {
+			if (err instanceof DOMException && err.name === 'AbortError') return; // superseded
+			if (seq === searchSeq) clearSuggest();
 		} finally {
-			searching = false;
+			if (seq === searchSeq) searching = false;
 		}
 	}
 
