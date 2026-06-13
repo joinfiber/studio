@@ -37,6 +37,26 @@ export interface CommonsClient {
 
 let warnedUnconfigured = false;
 
+/** Default ceiling on any single Commons round-trip. */
+export const SDK_TIMEOUT_MS = 15_000;
+
+/**
+ * openapi-fetch middleware that bounds every request with an AbortSignal
+ * timeout. Without it, one hung Commons connection blocks a request
+ * indefinitely — and a single hang inside publishBatch stalls the pool.
+ * Combined (not replaced) with any caller-supplied signal, so a per-call
+ * abort still works.
+ */
+export function timeoutMiddleware(ms: number) {
+	return {
+		onRequest({ request }: { request: Request }): Request {
+			const timeout = AbortSignal.timeout(ms);
+			const signal = AbortSignal.any([request.signal, timeout]);
+			return new Request(request, { signal });
+		},
+	};
+}
+
 export function createCommonsClient(): CommonsClient {
 	const baseUrl = env.COMMONS_BASE_URL ?? DEFAULT_BASE_URL;
 	const apiKey = env.COMMONS_SERVICE_KEY ?? null;
@@ -52,6 +72,7 @@ export function createCommonsClient(): CommonsClient {
 	}
 
 	const sdk = apiKey ? sdkCreate({ baseUrl, apiKey }) : null;
+	sdk?.use(timeoutMiddleware(SDK_TIMEOUT_MS));
 
 	return {
 		baseUrl,

@@ -27,7 +27,15 @@ export const POST: RequestHandler = async ({ request }) => {
 			? { lat: body.lat as number, lng: body.lng as number }
 			: undefined;
 
-	const details = await fetchGoogleDetails(name, bias);
-	if (!details) return json({ details: null }); // no match — panel stays OSM-only
-	return json({ details });
+	try {
+		const details = await fetchGoogleDetails(name, bias);
+		if (!details) return json({ details: null }); // no match — panel stays OSM-only
+		return json({ details });
+	} catch (err) {
+		// Reference lookup only — never block curation on a Google hiccup.
+		return json(
+			{ error: err instanceof Error ? err.message : 'Google lookup failed.', details: null },
+			{ status: 502 },
+		);
+	}
 };

@@ -14,6 +14,13 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({ error: 'Invalid JSON.' }, { status: 400 });
 	}
 	if (!body.orgId) return json({ error: 'Missing orgId.' }, { status: 400 });
-	await setOrgReviewed(body.orgId, body.reviewed !== false);
-	return json({ ok: true });
+	try {
+		await setOrgReviewed(body.orgId, body.reviewed !== false);
+		return json({ ok: true });
+	} catch (err) {
+		return json(
+			{ error: err instanceof Error ? err.message : 'Could not save review state.' },
+			{ status: 500 },
+		);
+	}
 };
