@@ -131,11 +131,26 @@ export function verifyToken(
 
 /**
  * Loopback host → local dev. The only context where the gate may be off without
- * a password (besides an explicit STUDIO_ALLOW_OPEN opt-in). A forged Host of
- * "localhost" against a public deploy is the residual edge; the practical footgun
- * this guards is deploying to a real domain without setting STUDIO_PASSWORD.
+ * a password (besides an explicit STUDIO_ALLOW_OPEN opt-in). The Host header is
+ * forgeable, so the caller pairs this with isLoopbackAddress on the real client
+ * peer — a spoofed `Host: localhost` from a remote client does NOT open the gate.
  */
 export function isLoopback(hostname: string): boolean {
 	const h = hostname.toLowerCase().replace(/^\[|\]$/g, ''); // strip IPv6 brackets
 	return h === 'localhost' || h === '127.0.0.1' || h === '::1' || h.endsWith('.localhost');
+}
+
+/**
+ * Is the actual CLIENT connection loopback? The Host header is attacker-set
+ * (so isLoopback alone is forgeable), but the peer address is not. Requiring
+ * both before the password-less bypass means a forged `Host: localhost` from a
+ * remote client can't open a public deploy. Covers IPv4 loopback (127/8), IPv6
+ * `::1`, and IPv4-mapped-IPv6 (`::ffff:127.x`).
+ */
+export function isLoopbackAddress(address: string): boolean {
+	const a = address
+		.trim()
+		.toLowerCase()
+		.replace(/^\[|\]$/g, '');
+	return a === '::1' || /^127\./.test(a) || /^::ffff:127\./.test(a);
 }

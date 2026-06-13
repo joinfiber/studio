@@ -17,7 +17,13 @@ import { redirect } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { createCommonsClient, type CommonsClient } from '$lib/kernel/commons-client';
 import { isAdminInstance } from '$lib/kernel/auth';
-import { gateEnabled, verifyToken, isLoopback, COOKIE_NAME } from '$lib/kernel/session';
+import {
+	gateEnabled,
+	verifyToken,
+	isLoopback,
+	isLoopbackAddress,
+	COOKIE_NAME,
+} from '$lib/kernel/session';
 
 let commonsClient: CommonsClient | null = null;
 let isAdminFlag: boolean | null = null;
@@ -74,10 +80,19 @@ export const handle: Handle = async ({ event, resolve }) => {
 			event.locals.authed = false; // asset under gate; value unused
 		}
 	} else {
-		// No password configured. Open only for local dev (loopback host) or an
-		// explicit opt-in; otherwise fail CLOSED rather than serve an open
+		// No password configured. Open only for local dev — which requires BOTH a
+		// loopback Host AND a loopback client address, so a forged `Host: localhost`
+		// from a remote client can't slip past the fail-closed guard — or an
+		// explicit opt-in. Otherwise fail CLOSED rather than serve an open
 		// privileged surface to the internet.
-		const openOk = isLoopback(event.url.hostname) || env.STUDIO_ALLOW_OPEN === 'true';
+		let clientLoopback = false;
+		try {
+			clientLoopback = isLoopbackAddress(event.getClientAddress());
+		} catch {
+			clientLoopback = false; // address unavailable → treat as non-local
+		}
+		const openOk =
+			(isLoopback(event.url.hostname) && clientLoopback) || env.STUDIO_ALLOW_OPEN === 'true';
 		if (!openOk && !isAsset) {
 			const headers = new Headers({ 'content-type': 'text/plain' });
 			applySecurityHeaders(headers, event.url.protocol);
