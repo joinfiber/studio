@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CATEGORIES, normalizeCategoryKey } from './categories.js';
+import { CATEGORIES, normalizeCategoryKey, categoryLabel } from './categories.js';
 
 describe('CATEGORIES', () => {
 	it('uses underscore slugs (the Commons write keys) — never kebab', () => {
@@ -36,5 +36,23 @@ describe('normalizeCategoryKey', () => {
 		expect(normalizeCategoryKey('')).toBeNull();
 		expect(normalizeCategoryKey(null)).toBeNull();
 		expect(normalizeCategoryKey(undefined)).toBeNull();
+	});
+});
+
+describe('categoryLabel', () => {
+	it('returns the human label for a known key (any form)', () => {
+		expect(categoryLabel('live_music')).toBe('Live music');
+		expect(categoryLabel('live-music')).toBe('Live music');
+		expect(categoryLabel('TRIVIA_GAMES')).toBe('Trivia & games');
+	});
+
+	it('title-cases an unknown/custom key instead of showing the raw slug', () => {
+		expect(categoryLabel('birthday_party')).toBe('Birthday Party');
+		expect(categoryLabel('art-walk')).toBe('Art Walk');
+	});
+
+	it('returns empty string for null/empty', () => {
+		expect(categoryLabel(null)).toBe('');
+		expect(categoryLabel('')).toBe('');
 	});
 });
