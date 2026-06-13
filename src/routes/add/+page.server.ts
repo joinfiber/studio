@@ -161,22 +161,28 @@ export const actions: Actions = {
 			};
 		}
 
+		// If a primary Place was created above and the org create then failed, the
+		// Place is committed and the Commons has no delete endpoint to undo it.
+		// Say so rather than let the operator discover a stray Place.
+		const orphan = primaryPlaceId
+			? ' A Place was already created; the Organization was not — re-submit to attach it.'
+			: '';
 		const status = result.response.status;
 		if (status === 409) {
 			return fail(409, {
 				kind: 'organization' as const,
-				error: `Slug already in use for "${name}". Try a more specific name.`,
+				error: `Slug already in use for "${name}". Try a more specific name.${orphan}`,
 			});
 		}
 		if (status === 401) {
 			return fail(401, {
 				kind: 'organization' as const,
-				error: 'Unauthorized — check the Commons service key.',
+				error: `Unauthorized — check the Commons service key.${orphan}`,
 			});
 		}
 		return fail(status, {
 			kind: 'organization' as const,
-			error: result.error?.error?.message ?? `Commons returned ${status}.`,
+			error: `${result.error?.error?.message ?? `Commons returned ${status}.`}${orphan}`,
 		});
 	},
 
