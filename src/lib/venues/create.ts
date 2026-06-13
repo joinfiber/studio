@@ -111,15 +111,36 @@ export async function createVenue(
 	};
 	if (v.method) orgBody.method = v.method;
 	if (v.openingHours?.length) orgBody.openingHoursSpecification = v.openingHours;
-	const org = await sdk.POST('/service/organizations', { body: orgBody });
-	if (!org.data) {
-		const status = org.response.status;
+
+	let org;
+	try {
+		org = await sdk.POST('/service/organizations', { body: orgBody });
+	} catch (err) {
+		// Network/timeout after the Place was already committed (see orphan note).
 		return {
-			error:
-				status === 409
-					? 'already exists'
-					: (org.error?.error?.message ?? `org create returned ${status}`),
+			placeId,
+			error: `${err instanceof Error ? err.message : 'org create failed'}${orphanNote(externalId)}`,
 		};
 	}
+	if (!org.data) {
+		const status = org.response.status;
+		const base =
+			status === 409
+				? 'already exists'
+				: (org.error?.error?.message ?? `org create returned ${status}`);
+		// The Place was committed first and the Commons exposes no place-delete
+		// endpoint, so we can't roll it back. Report it rather than leave the
+		// operator to discover a stray Place. It carries our externalId when one
+		// was available, so it's dedup-keyed (a later success reuses it); without
+		// one, a retry can fork another — which is exactly what we flag.
+		return { placeId, error: `${base}${orphanNote(externalId)}` };
+	}
 	return { orgId: org.data.organization.id, placeId };
+}
+
+/** Append an honest note about the Place left behind by a failed org create. */
+function orphanNote(externalId: string | undefined): string {
+	return externalId
+		? ` (a Place was created and kept; it's keyed to ${externalId}, so a retry reuses it)`
+		: ' (a Place was created but has no external id — a retry may create another; consider a Google Places or OSM identity)';
 }

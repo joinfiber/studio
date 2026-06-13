@@ -195,6 +195,45 @@ describe('resolveOrganizerId', () => {
 		const { sdk } = fakeSdk();
 		await expect(resolveOrganizerId(sdk, '   ')).rejects.toThrow(/required/);
 	});
+
+	it('pages past a saturated first page to find the exact org (no silent duplicate)', async () => {
+		// 100 substring hits on page 0 (none exact), the exact org on page 1.
+		const page0 = Array.from({ length: 100 }, (_, i) => ({
+			id: `o${i}`,
+			name: `Friends Group ${i}`,
+		}));
+		const get = vi.fn(async (_path: string, opts: { params: { query: { offset?: number } } }) => {
+			const offset = opts.params.query.offset ?? 0;
+			return offset === 0
+				? { data: { organizations: page0, meta: { total: 101 } }, response: { status: 200 } }
+				: {
+						data: {
+							organizations: [{ id: 'org-exact', name: 'Friends Group' }],
+							meta: { total: 101 },
+						},
+						response: { status: 200 },
+					};
+		});
+		const { sdk, post } = fakeSdk({ GET: get });
+		expect(await resolveOrganizerId(sdk, 'Friends Group')).toBe('org-exact');
+		expect(get).toHaveBeenCalledTimes(2);
+		expect(post).not.toHaveBeenCalled(); // never forked a duplicate
+	});
+
+	it('stops paging and creates once the result set is exhausted', async () => {
+		// A single short page (< limit) means we have seen everything — create.
+		const get = vi.fn(async () => ({
+			data: { organizations: [{ id: 'x', name: 'Other Org' }], meta: { total: 1 } },
+			response: { status: 200 },
+		}));
+		const post = vi.fn(async () => ({
+			data: { organization: { id: 'org-new' } },
+			response: { status: 201 },
+		}));
+		const { sdk } = fakeSdk({ GET: get, POST: post });
+		expect(await resolveOrganizerId(sdk, 'Brand New Org')).toBe('org-new');
+		expect(get).toHaveBeenCalledTimes(1); // didn't keep paging a short page
+	});
 });
 
 describe('toOffsetIso input guards', () => {

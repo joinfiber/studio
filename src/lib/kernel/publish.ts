@@ -108,23 +108,31 @@ export function toOffsetIso(value: string, tz: string): string {
 
 // --- organizer resolution ------------------------------------------------
 
+const ORG_SEARCH_LIMIT = 100;
+const ORG_SEARCH_MAX_PAGES = 5; // scan up to 500 substring matches before forking
+
 /** Find an org by exact (case-insensitive) name, else create it. Returns id. */
 export async function resolveOrganizerId(sdk: Sdk, name: string): Promise<string> {
 	const trimmed = name.trim();
 	if (!trimmed) throw new Error('Organizer name is required.');
+	const target = trimmed.toLowerCase();
 
-	// The Commons search is a substring match ordered by recency; we then pick
-	// the exact (case-insensitive) name. A generous limit avoids missing the
-	// exact org when a common token has many substring hits (which would
-	// otherwise create a duplicate org). Residual risk only if >100 orgs share
-	// the substring AND the exact one isn't among the most recent 100.
-	const search = await sdk.GET('/organizations', {
-		params: { query: { q: trimmed, limit: 100 } },
-	});
-	const match = search.data?.organizations?.find(
-		(o) => o.name.toLowerCase() === trimmed.toLowerCase(),
-	);
-	if (match) return match.id;
+	// The Commons search is a substring match; the exact-name org therefore
+	// always contains its own name as a substring and is somewhere in the
+	// result set. Page through (bounded) to find it before creating — one
+	// saturated page used to hide the exact org behind 100 substring hits and
+	// silently fork a duplicate organization, splitting an org's events in two.
+	for (let page = 0; page < ORG_SEARCH_MAX_PAGES; page++) {
+		const offset = page * ORG_SEARCH_LIMIT;
+		const search = await sdk.GET('/organizations', {
+			params: { query: { q: trimmed, limit: ORG_SEARCH_LIMIT, offset } },
+		});
+		const orgs = search.data?.organizations ?? [];
+		const match = orgs.find((o) => o.name.toLowerCase() === target);
+		if (match) return match.id;
+		const total = search.data?.meta?.total ?? orgs.length;
+		if (orgs.length < ORG_SEARCH_LIMIT || offset + ORG_SEARCH_LIMIT >= total) break; // exhausted
+	}
 
 	const created = await sdk.POST('/service/organizations', { body: { name: trimmed } });
 	if (created.data?.organization) return created.data.organization.id;
