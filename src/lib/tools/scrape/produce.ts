@@ -3,7 +3,7 @@
  * extractor. The "works for many sites out of the box" path.
  *
  * For sites the generic pass can't handle, the pattern is: write a
- * site-specific produce() returning Candidate[] (the AI-authoring case — see
+ * site-specific produce() returning EventCandidate[] (the AI-authoring case — see
  * docs/extending.md). This module is both the generic tool and the worked
  * template.
  *
