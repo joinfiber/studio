@@ -41,17 +41,20 @@ import { issueToken } from '$lib/kernel/session.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Build the minimal RequestEvent that `handle` inspects. */
+/** Build the minimal RequestEvent that `handle` inspects. The client address
+ *  defaults to loopback (the genuine local-dev case). */
 function makeEvent(
 	pathname: string,
 	hostname: string,
 	cookieValue?: string,
+	clientAddress = '127.0.0.1',
 ): Parameters<typeof handle>[0]['event'] {
 	return {
 		url: new URL(`http://${hostname}${pathname}`),
 		cookies: {
 			get: (_name: string) => cookieValue,
 		},
+		getClientAddress: () => clientAddress,
 		locals: {},
 		// The real RequestEvent has many more fields; handle only touches the above.
 	} as unknown as Parameters<typeof handle>[0]['event'];
@@ -164,9 +167,35 @@ describe('gate OFF', () => {
 		expect(event.locals.authed).toBe(true);
 	});
 
-	it('STUDIO_ALLOW_OPEN=true + non-loopback host calls resolve with authed=true', async () => {
+	it('forged Host: localhost from a REMOTE client still returns 503', async () => {
+		// The attack: a public, password-less deploy reached with a spoofed Host
+		// header. The loopback host alone used to open the gate.
+		const event = makeEvent('/dashboard', 'localhost', undefined, '203.0.113.7');
+		const resolve = makeResolve();
+
+		const response = await handle({ event, resolve });
+		expect(response.status).toBe(503);
+		expect(resolve).not.toHaveBeenCalled();
+	});
+
+	it('loopback host with a non-loopback client (e.g. Docker bridge) fails closed', async () => {
+		const event = makeEvent('/dashboard', 'localhost', undefined, '172.17.0.1');
+		const resolve = makeResolve();
+		const response = await handle({ event, resolve });
+		expect(response.status).toBe(503);
+	});
+
+	it('accepts IPv4-mapped-IPv6 loopback client (::ffff:127.0.0.1)', async () => {
+		const event = makeEvent('/dashboard', 'localhost', undefined, '::ffff:127.0.0.1');
+		const resolve = makeResolve();
+		const response = await handle({ event, resolve });
+		expect(resolve).toHaveBeenCalledOnce();
+		expect(response.status).toBe(200);
+	});
+
+	it('STUDIO_ALLOW_OPEN=true opens even a remote client on a public host', async () => {
 		env.STUDIO_ALLOW_OPEN = 'true';
-		const event = makeEvent('/dashboard', 'example.com', undefined);
+		const event = makeEvent('/dashboard', 'example.com', undefined, '203.0.113.7');
 		const resolve = makeResolve();
 
 		const response = await handle({ event, resolve });

@@ -3,7 +3,14 @@ import { createHmac } from 'node:crypto';
 // Import the stub directly: under vitest, `$env/dynamic/private` is aliased to
 // this same file, so the `env` object here IS the one session.ts reads.
 import { env, clearEnv } from '$lib/test/env-stub.js';
-import { issueToken, verifyToken, checkPassword, gateEnabled, isLoopback } from './session.js';
+import {
+	issueToken,
+	verifyToken,
+	checkPassword,
+	gateEnabled,
+	isLoopback,
+	isLoopbackAddress,
+} from './session.js';
 
 beforeEach(clearEnv);
 
@@ -171,5 +178,23 @@ describe('isLoopback', () => {
 		expect(isLoopback('notlocalhost')).toBe(false);
 		expect(isLoopback('example.com')).toBe(false);
 		expect(isLoopback('192.168.1.1')).toBe(false);
+	});
+});
+
+describe('isLoopbackAddress (client peer, not forgeable via Host)', () => {
+	it('accepts IPv4 127/8, IPv6 ::1, and IPv4-mapped loopback', () => {
+		expect(isLoopbackAddress('127.0.0.1')).toBe(true);
+		expect(isLoopbackAddress('127.1.2.3')).toBe(true);
+		expect(isLoopbackAddress('::1')).toBe(true);
+		expect(isLoopbackAddress('[::1]')).toBe(true);
+		expect(isLoopbackAddress('::ffff:127.0.0.1')).toBe(true);
+	});
+
+	it('rejects remote, LAN, and Docker-bridge addresses', () => {
+		expect(isLoopbackAddress('203.0.113.7')).toBe(false);
+		expect(isLoopbackAddress('192.168.1.5')).toBe(false);
+		expect(isLoopbackAddress('172.17.0.1')).toBe(false);
+		expect(isLoopbackAddress('10.0.0.1')).toBe(false);
+		expect(isLoopbackAddress('')).toBe(false);
 	});
 });
