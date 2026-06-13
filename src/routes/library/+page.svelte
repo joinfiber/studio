@@ -5,7 +5,7 @@
 	import { page } from '$app/state';
 	import type { PageData } from './$types';
 	import type { LiveEvent } from '$lib/instance/library.js';
-	import { CATEGORIES } from '$lib/kernel/categories.js';
+	import { CATEGORIES, categoryLabel } from '$lib/kernel/categories.js';
 	import { toast } from '$lib/kernel/chrome/toast.svelte.js';
 
 	let { data }: { data: PageData } = $props();
@@ -102,9 +102,17 @@
 		goto(`?${params.toString()}`, { replaceState: true, keepFocus: true });
 	}
 
+	// Mirror the server's active search into the box, but only when the SERVER
+	// value actually changes — otherwise an unrelated data update (or any other
+	// reactive tick) would clobber text the operator is mid-typing. Seeded by the
+	// effect's first run (which also covers a deep-linked ?q=).
 	let searchInput = $state('');
+	let lastServerSearch = '';
 	$effect(() => {
-		searchInput = f.search;
+		if (f.search !== lastServerSearch) {
+			lastServerSearch = f.search;
+			searchInput = f.search;
+		}
 	});
 
 	function formatDate(d: string | null): string {
@@ -206,7 +214,7 @@
 							</div>
 						</div>
 						<div class="item-meta">
-							{#if ev.category}<span class="category">{ev.category}</span>{/if}
+							{#if ev.category}<span class="category">{categoryLabel(ev.category)}</span>{/if}
 							<span class="status status-{ev.status}">{statusLabel(ev.status)}</span>
 						</div>
 					</button>

@@ -52,3 +52,17 @@ export function normalizeCategoryKey(input: string | null | undefined): string |
 		.replace(/[\s-]+/g, '_');
 	return SLUGS.has(key) ? key : null;
 }
+
+const LABELS: ReadonlyMap<string, string> = new Map(CATEGORIES.map((c) => [c.slug, c.label]));
+
+/**
+ * Human label for a category key (any kebab/underscore/case form). Falls back
+ * to a title-cased version of an unknown key rather than showing the raw
+ * `live_music` slug in the UI.
+ */
+export function categoryLabel(key: string | null | undefined): string {
+	if (!key) return '';
+	const norm = normalizeCategoryKey(key);
+	if (norm) return LABELS.get(norm) as string;
+	return key.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
