@@ -30,8 +30,6 @@ export interface CandidateBase {
 	source_tool: string; // which tool produced this (folder name in lib/tools or lib/operator)
 	source_uri?: string | null; // original source if applicable (URL, file path, etc.)
 	created_at: string;
-	reviewed_at?: string | null;
-	reviewer_notes?: string | null;
 }
 
 /**
@@ -69,9 +67,9 @@ export interface EventCandidate extends CandidateBase {
 	submitter?: SubmitterInfo | null;
 }
 
-// Other candidate kinds (Organization, Place, Broadcast, List) land as
-// their respective tools are built.
-export type Candidate = EventCandidate; // expand to discriminated union as kinds land
+// EventCandidate is the only kind today. Other kinds (Organization, Place,
+// Broadcast, List) land as their tools are built; widen the producers/consumers
+// to a discriminated union of CandidateBase subtypes when they do.
 
 /** Small deterministic string hash (djb2-xor) → base36. */
 function shortHash(seed: string): string {
