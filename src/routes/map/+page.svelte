@@ -126,6 +126,17 @@
 	let orgFeatures: Feature[] = [];
 	const orgKeys = new Set<string>();
 
+	// Overpass guard: one query at a time (coalesce a pan that lands mid-flight)
+	// and skip viewports already covered by a previous query — so dragging the
+	// map doesn't fire concurrent heavy queries at the rate-limited public
+	// endpoint or re-fetch ground we've already loaded.
+	let osmInFlight = false;
+	let osmPending = false;
+	type Bbox = { s: number; w: number; n: number; e: number };
+	const coveredBboxes: Bbox[] = [];
+	const bboxCovered = (b: Bbox) =>
+		coveredBboxes.some((c) => c.s <= b.s && c.w <= b.w && c.n >= b.n && c.e >= b.e);
+
 	const roundKey = (lat: number, lng: number) => `${lat.toFixed(3)},${lng.toFixed(3)}`;
 	function orgFeature(p: {
 		id: string;
@@ -553,18 +564,30 @@
 
 	async function loadOsm() {
 		if (!map) return;
+		// One Overpass query at a time; remember a pan that arrives mid-flight and
+		// run exactly once more when this one finishes.
+		if (osmInFlight) {
+			osmPending = true;
+			return;
+		}
 		if (map.getZoom() < MIN_OSM_ZOOM) {
 			zoomLow = true;
 			return; // keep what's loaded; just don't fetch more
 		}
 		zoomLow = false;
 		if (osmById.size >= MAX_OSM) return;
-		const b = map.getBounds();
+		const bounds = map.getBounds();
+		const b: Bbox = {
+			s: bounds.getSouth(),
+			w: bounds.getWest(),
+			n: bounds.getNorth(),
+			e: bounds.getEast(),
+		};
+		if (bboxCovered(b)) return; // already fetched this ground (zoom-in / small pan)
+		osmInFlight = true;
 		osmLoading = true;
 		try {
-			const res = await fetch(
-				`/map/osm?s=${b.getSouth()}&w=${b.getWest()}&n=${b.getNorth()}&e=${b.getEast()}`,
-			);
+			const res = await fetch(`/map/osm?s=${b.s}&w=${b.w}&n=${b.n}&e=${b.e}`);
 			const d = (await res.json()) as { venues?: OsmVenue[] };
 			let changed = false;
 			for (const v of d.venues ?? []) {
@@ -580,11 +603,18 @@
 				});
 				changed = true;
 			}
+			coveredBboxes.push(b);
+			if (coveredBboxes.length > 50) coveredBboxes.shift(); // bound the cache
 			if (changed) setOsm();
 		} catch {
 			/* transient — keep existing dots */
 		} finally {
+			osmInFlight = false;
 			osmLoading = false;
+			if (osmPending) {
+				osmPending = false;
+				void loadOsm(); // serve the viewport that arrived while we were busy
+			}
 		}
 	}
 
