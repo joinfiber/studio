@@ -111,18 +111,18 @@
 	$effect(() => {
 		searchInput = f.search;
 	});
+	let nearInput = $state('');
+	$effect(() => {
+		nearInput = f.near;
+	});
 
-	// Client-side facets over the loaded page.
-	let cityFacet = $state('');
+	// `venuesOnly` is a lightweight page-local refine. Location filtering is
+	// server-side via near/radius (the Commons has no city facet), so it filters
+	// the whole dataset rather than just the loaded page.
 	let venuesOnly = $state(false);
 	let expandedId = $state<string | null>(null);
 
-	const cities = $derived(
-		[...new Set(orgs.map((o) => o.city).filter((c): c is string => !!c))].sort(),
-	);
-	const shown = $derived(
-		orgs.filter((o) => (!venuesOnly || o.hasPlace) && (!cityFacet || o.city === cityFacet)),
-	);
+	const shown = $derived(orgs.filter((o) => !venuesOnly || o.hasPlace));
 
 	const hasPrev = $derived(f.offset > 0);
 	const hasNext = $derived(f.offset + orgs.length < total);
@@ -165,13 +165,28 @@
 		<label class="check">
 			<input type="checkbox" bind:checked={venuesOnly} /> Venues only
 		</label>
-		{#if cities.length > 1}
-			<select aria-label="City" bind:value={cityFacet}>
-				<option value="">All cities</option>
-				{#each cities as c}<option value={c}>{c}</option>{/each}
+		<form class="near" onsubmit={(e) => (e.preventDefault(), setParam('near', nearInput.trim()))}>
+			<input type="search" bind:value={nearInput} placeholder="Near a place…" />
+			<select
+				aria-label="Radius"
+				value={String(f.radius)}
+				onchange={(e) => setParam('radius', e.currentTarget.value)}
+			>
+				{#each [1, 2, 5, 10, 25] as km}<option value={String(km)}>{km} km</option>{/each}
 			</select>
-		{/if}
+		</form>
 	</div>
+
+	{#if data.live && (data.geocodeError || data.nearResolved)}
+		<p class="near-status">
+			{#if data.geocodeError}
+				<span class="warn">{data.geocodeError}</span>
+			{:else if data.nearResolved}
+				Within {f.radius} km of <strong>{data.nearResolved.displayName}</strong>
+				<button type="button" class="linklike" onclick={() => setParam('near', '')}>clear</button>
+			{/if}
+		</p>
+	{/if}
 
 	{#if data.error}
 		<div class="error-box"><p>Couldn't load organizations: {data.error}</p></div>
@@ -414,6 +429,41 @@
 		background: #fff;
 		color: #333;
 		cursor: pointer;
+	}
+	.toolbar .near {
+		display: inline-flex;
+		gap: 0.35rem;
+		margin: 0;
+	}
+	.toolbar .near input {
+		flex: 0 1 11rem;
+		font-family: inherit;
+		font-size: 0.9rem;
+		padding: 0.45rem 0.7rem;
+		border: 1px solid #d0d0d0;
+		border-radius: 5px;
+		outline: none;
+	}
+	.toolbar .near input:focus {
+		border-color: var(--accent);
+		box-shadow: 0 0 0 2px rgba(22, 101, 52, 0.15);
+	}
+	.near-status {
+		margin: -0.25rem 0 1rem;
+		font-size: 0.82rem;
+		color: #555;
+	}
+	.near-status .warn {
+		color: #9a3412;
+	}
+	.near-status .linklike {
+		background: none;
+		border: none;
+		color: var(--accent);
+		font: inherit;
+		padding: 0;
+		cursor: pointer;
+		text-decoration: underline;
 	}
 	.toggle {
 		display: inline-flex;
