@@ -20,6 +20,7 @@
 		type DayHours,
 	} from '$lib/venues/hours.js';
 	import type { GoogleDetails } from '$lib/venues/google-details.js';
+	import { orgFeatureDiff } from './org-features.js';
 
 	type OsmVenue = {
 		name: string;
@@ -168,8 +169,10 @@
 	function patchOrgFeature(orgId: string, props: Partial<{ name: string; reviewed: boolean }>) {
 		const f = orgFeatures.find((ft) => ft.properties.id === orgId);
 		if (!f) return;
-		Object.assign(f.properties, props);
-		setOrgs();
+		Object.assign(f.properties, props); // keep local array in sync (full-reload paths)
+		// Targeted diff instead of re-serializing the whole collection. The orgs
+		// source uses promoteId:'id', so the feature is addressable by org id.
+		(map?.getSource('orgs') as GeoJSONSource | undefined)?.updateData(orgFeatureDiff(orgId, props));
 	}
 	function fmtAddr(a?: Record<string, string | undefined> | null): string {
 		return a
@@ -652,6 +655,7 @@
 				});
 				map.addSource('orgs', {
 					type: 'geojson',
+					promoteId: 'id', // address features by org id so patchOrgFeature can diff one
 					data: { type: 'FeatureCollection', features: orgFeatures },
 				});
 				map.addLayer({
