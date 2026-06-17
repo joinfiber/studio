@@ -58,6 +58,24 @@ function applySecurityHeaders(headers: Headers, protocol: string): void {
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
+	// TEMP origin diagnostic (debug/origin-403). Logs on /login so we can compare
+	// the server's computed origin against the browser's Origin. REMOVE after.
+	if (event.url.pathname === '/login') {
+		const h = event.request.headers;
+		console.log(
+			'[origin-debug] ' +
+				JSON.stringify({
+					method: event.request.method,
+					computedOrigin: event.url.origin,
+					protocol: event.url.protocol,
+					originHeader: h.get('origin'),
+					host: h.get('host'),
+					xForwardedProto: h.get('x-forwarded-proto'),
+					xForwardedHost: h.get('x-forwarded-host'),
+				}),
+		);
+	}
+
 	if (commonsClient === null) commonsClient = createCommonsClient();
 	if (isAdminFlag === null) isAdminFlag = isAdminInstance();
 	event.locals.commons = commonsClient;
