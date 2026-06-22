@@ -41,7 +41,12 @@ const UNCONFIGURED =
  *   logged-in operator into privileged writes (belt & braces: older browsers
  *   honour X-Frame-Options, modern ones the CSP directive).
  * - X-Content-Type-Options: no MIME sniffing.
- * - Referrer-Policy: never leak the deployment URL to third parties.
+ * - Referrer-Policy: strict-origin-when-cross-origin — send only the origin
+ *   (not the path) cross-origin, full URL same-origin, nothing on downgrade.
+ *   NOT `no-referrer`: per the Fetch spec that serializes the `Origin` header
+ *   as `null` on form POSTs, which breaks SvelteKit's same-origin CSRF check
+ *   (login returns "Cross-site POST forbidden"). This policy also lets
+ *   referrer-restricted keys (e.g. MapTiler) see the origin they gate on.
  * - HSTS: https only, so local HTTP dev isn't poisoned.
  *
  * A full script-src CSP is deferred: maplibre-gl needs worker-src blob: (and
@@ -51,31 +56,13 @@ function applySecurityHeaders(headers: Headers, protocol: string): void {
 	headers.set('X-Frame-Options', 'DENY');
 	headers.set('Content-Security-Policy', "frame-ancestors 'none'");
 	headers.set('X-Content-Type-Options', 'nosniff');
-	headers.set('Referrer-Policy', 'no-referrer');
+	headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 	if (protocol === 'https:') {
 		headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
 	}
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
-	// TEMP origin diagnostic (debug/origin-403). Logs on /login so we can compare
-	// the server's computed origin against the browser's Origin. REMOVE after.
-	if (event.url.pathname === '/login') {
-		const h = event.request.headers;
-		console.log(
-			'[origin-debug] ' +
-				JSON.stringify({
-					method: event.request.method,
-					computedOrigin: event.url.origin,
-					protocol: event.url.protocol,
-					originHeader: h.get('origin'),
-					host: h.get('host'),
-					xForwardedProto: h.get('x-forwarded-proto'),
-					xForwardedHost: h.get('x-forwarded-host'),
-				}),
-		);
-	}
-
 	if (commonsClient === null) commonsClient = createCommonsClient();
 	if (isAdminFlag === null) isAdminFlag = isAdminInstance();
 	event.locals.commons = commonsClient;

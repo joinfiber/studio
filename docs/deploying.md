@@ -48,6 +48,22 @@ pnpm start
 
 The build is a standard long-running Node.js server (adapter-node). Deploy to Railway, Render, Fly.io, or anywhere a Node process runs. (Serverless platforms like Vercel need a different SvelteKit adapter than the bundled adapter-node.)
 
+### Behind a reverse proxy (TLS termination)
+
+Most hosts terminate TLS at an edge proxy and forward plain HTTP to your app. The app then thinks its origin is `http://…` while the browser is on `https://…`, and SvelteKit's CSRF check rejects the login with **`Cross-site POST form submissions are forbidden`**. Tell adapter-node the real origin so the origins match:
+
+```bash
+# If your proxy forwards the X-Forwarded-Proto header (most do, incl. Railway):
+PROTOCOL_HEADER=x-forwarded-proto
+# If it doesn't forward the original Host, also set:
+# HOST_HEADER=x-forwarded-host
+
+# …or pin the public origin explicitly (no quotes, no trailing slash):
+# ORIGIN=https://your-domain.example
+```
+
+The bundled `railway.json` already sets `PROTOCOL_HEADER=x-forwarded-proto` in its start command, so a Railway deploy needs nothing extra. (If you set `ORIGIN`, it takes precedence over the header pair — so don't leave a stale/quoted `ORIGIN` set.)
+
 ## Database
 
 Studio uses local SQLite (via libsql) for staging candidates that haven't been published yet. The database is *local to your deployment* — it doesn't sync anywhere. Commons is the source of truth for published facts.
