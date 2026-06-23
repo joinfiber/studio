@@ -11,6 +11,10 @@
 		"type": "git",
 		"url": "https://github.com/joinfiber/studio.git"
 	},
+	"homepage": "https://github.com/joinfiber/studio#readme",
+	"bugs": {
+		"url": "https://github.com/joinfiber/studio/issues"
+	},
 	"type": "module",
 	"packageManager": "pnpm@10.23.0",
 	"scripts": {
