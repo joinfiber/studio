@@ -160,8 +160,8 @@ export function contactFromOsmTags(tags?: Record<string, string>): {
 /**
  * Search OSM by name for venue candidates (multiple results) — the data behind
  * the Add → Place picker. Same endpoint/policy as `geocode`; returns the OSM
- * element id alongside each result so it can become a dedup key once the
- * Commons accepts one (a planned upstream capability).
+ * element id alongside each result, which `createVenue` commits as the place's
+ * external dedup key (`osm:type/id` → `googlePlaceId`).
  */
 export async function searchPlaces(query: string, limit = 5): Promise<PlaceCandidate[]> {
 	const q = query.trim();
