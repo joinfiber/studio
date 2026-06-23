@@ -1,7 +1,7 @@
 /**
  * Publish adapter — the shared path that turns an approved EventCandidate
- * into a real Commons event. Every ingestion tool (calendar, sheets,
- * newsletter, scraper) and the Add → Event form reuse this.
+ * into a real Commons event. Every ingestion tool (calendar, sheets, rss,
+ * extract, scrape) and the Add → Event form reuse this.
  *
  * Three responsibilities:
  *  1. Resolve the organizer org (search-or-create) → organizerOrganizationId.

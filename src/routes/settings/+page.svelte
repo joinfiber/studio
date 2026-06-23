@@ -155,10 +155,6 @@
 				</li>
 			{/each}
 		</ul>
-		<p class="footnote">
-			Mock data. Live counts require a Commons endpoint exposing consuming apps per contributor —
-			not yet built.
-		</p>
 	{/if}
 </section>
 
@@ -371,13 +367,6 @@
 		color: #888;
 		min-width: 7rem;
 		text-align: right;
-	}
-	.footnote {
-		margin: 0.85rem 0 0;
-		padding-top: 0.85rem;
-		border-top: 1px dashed #ddd;
-		font-size: 0.75rem;
-		color: #888;
 	}
 	code {
 		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;

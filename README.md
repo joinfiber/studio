@@ -77,4 +77,4 @@ MIT. See [LICENSE](LICENSE). Do what you like with it.
 
 ## Status
 
-**v0.3.** Reads and writes the Commons end to end — ingestion, manual entry, venue import, the map, a persistent review queue, and library management. The core (events + venues) is solid; a few of the ingestion sources are earlier than others (the newsletter/scrape/calendar paths get more hardening as they're used). A couple of niceties wait on upstream Commons work (caller-set `proxied` provenance, a key-capabilities endpoint, a place-update endpoint). Issues and pull requests welcome.
+**v0.3.** Reads and writes the Commons end to end — ingestion, manual entry, venue import, the map, a persistent review queue, and library management. The core (events + venues) is solid; a few of the ingestion sources are earlier than others (the extract/scrape/calendar paths get more hardening as they're used). A couple of niceties wait on upstream Commons work (a key-capabilities endpoint, a place-update endpoint, and caller-set provenance on _organizations_ — events already publish with honest `proxied`/`witnessed` provenance). Issues and pull requests welcome.

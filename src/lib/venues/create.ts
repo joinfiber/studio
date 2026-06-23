@@ -26,8 +26,9 @@ export interface VenueInput {
 	sameAs?: string[];
 	tags?: string[];
 	/** Provenance for the org. OSM/scrape imports are 'proxied' (a public
-	 *  source); omit to take the Commons default ('seeded'). Honored once the
-	 *  Commons accepts caller-set method; harmless (stripped) before then. */
+	 *  source); omit to take the Commons default ('seeded'). Sent on the org
+	 *  write but ignored until the Commons accepts caller-set method
+	 *  (OrganizationInput has no `method` field yet). */
 	method?: string;
 	/** schema.org OpeningHoursSpecification[] — the operator's curated hours. */
 	openingHours?: OpeningHoursEntry[];
