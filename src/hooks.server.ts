@@ -27,6 +27,7 @@ import {
 
 let commonsClient: CommonsClient | null = null;
 let isAdminFlag: boolean | null = null;
+let warnedProxyOrigin = false;
 
 const UNCONFIGURED =
 	'Studio is not configured for public access. Set STUDIO_PASSWORD to enable the access ' +
@@ -62,11 +63,41 @@ function applySecurityHeaders(headers: Headers, protocol: string): void {
 	}
 }
 
+/**
+ * A TLS proxy is forwarding https, but adapter-node computed an http origin —
+ * so SvelteKit's CSRF check will reject the login POST ("Cross-site POST
+ * forbidden"). Means PROTOCOL_HEADER / ORIGIN is unset. See docs/deploying.md.
+ */
+export function proxyOriginLikelyMisconfigured(
+	forwardedProto: string | null,
+	computedProtocol: string,
+): boolean {
+	return forwardedProto === 'https' && computedProtocol === 'http:';
+}
+
 export const handle: Handle = async ({ event, resolve }) => {
 	if (commonsClient === null) commonsClient = createCommonsClient();
 	if (isAdminFlag === null) isAdminFlag = isAdminInstance();
 	event.locals.commons = commonsClient;
 	event.locals.isAdmin = isAdminFlag;
+
+	// One-time nudge: behind a TLS proxy that forwards https while we computed an
+	// http origin, login POSTs will 403. Point operators at the fix before they
+	// hit the cryptic CSRF error. (Railway is handled by railway.json already.)
+	if (
+		!warnedProxyOrigin &&
+		proxyOriginLikelyMisconfigured(
+			event.request.headers.get('x-forwarded-proto'),
+			event.url.protocol,
+		)
+	) {
+		warnedProxyOrigin = true;
+		console.warn(
+			'[origin] Requests arrive with x-forwarded-proto=https but this server computed an http ' +
+				'origin — logins will fail with "Cross-site POST form submissions are forbidden". Set ' +
+				'PROTOCOL_HEADER=x-forwarded-proto (or ORIGIN=https://your-domain). See docs/deploying.md.',
+		);
+	}
 
 	const path = event.url.pathname;
 	const isAsset = path.startsWith('/_app/') || path.startsWith('/favicon');
