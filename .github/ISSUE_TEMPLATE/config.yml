@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Commons API / contract question
+    url: https://github.com/joinfiber/neighborhood-commons
+    about: Studio reads and writes through the published neighborhood-commons SDK. For questions about the Commons API itself (endpoints, fields, behavior), open an issue on the Commons repo.
+  - name: Security vulnerability
+    url: https://github.com/joinfiber/studio/security/advisories/new
+    about: Please report security issues privately, not as a public issue. See SECURITY.md.
