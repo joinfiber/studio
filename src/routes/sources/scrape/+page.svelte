@@ -56,7 +56,9 @@
 		<div class="gate">
 			<p class="gate-intro">Scraping reuses the LLM extraction capability:</p>
 			<CapabilityGuide capability={data.capability} />
-			<p class="gate-note">Set the key + redeploy — Studio ships none. Then this page scrapes.</p>
+			<p class="gate-note">
+				Set the key in your environment and redeploy — Studio ships none. Then this page scrapes.
+			</p>
 		</div>
 	{/if}
 {:else}

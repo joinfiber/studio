@@ -110,3 +110,8 @@ export function pickOrgPatch(patch: Record<string, unknown>): Record<string, unk
 	for (const k of EDITABLE_ORG_FIELDS) if (k in patch) out[k] = patch[k];
 	return out;
 }
+
+/** Shared 403 message for the two org-edit surfaces (Venues tab + map panel),
+ *  which are the same operation and should read identically. */
+export const NOT_LINKED_EDIT =
+	'Not linked — only this organization’s owner (or an admin key) can edit it.';

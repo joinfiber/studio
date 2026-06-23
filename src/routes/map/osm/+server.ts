@@ -5,7 +5,8 @@ import { queryVenues, CATEGORY_GROUPS } from '$lib/venues/overpass.js';
 /**
  * OSM businesses in the current map viewport (gray dots). Server-proxied so the
  * Overpass call (and User-Agent) stays server-side. Bounded: rejects too-large
- * boxes — the client only queries at sufficient zoom.
+ * boxes — the client only queries at sufficient zoom. Same-origin only
+ * (Origin-checked by SvelteKit).
  */
 const ALL_GROUPS = CATEGORY_GROUPS.map((g) => g.id);
 const MAX_SPAN_DEG = 0.18; // ~20km; guards against city-wide queries

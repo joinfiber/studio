@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import type { components } from 'neighborhood-commons';
-import { mapOrganization, pickOrgPatch } from '$lib/instance/organizations.js';
+import { mapOrganization, pickOrgPatch, NOT_LINKED_EDIT } from '$lib/instance/organizations.js';
 
 type OrgInput = components['schemas']['OrganizationInput'];
 
@@ -32,7 +32,8 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 /**
  * Update a venue. PATCH /service/organizations/{id} is a partial merge — only
  * the changed fields are sent. 403 if this key isn't linked to the org (admin
- * keys bypass). Mirrors the venues-tab editor.
+ * keys bypass). Mirrors the venues-tab editor. Same-origin only (Origin-checked
+ * by SvelteKit).
  */
 export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	const { commons } = locals;
@@ -63,10 +64,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 		if (r.error) {
 			const status = r.response.status;
 			if (status === 403) {
-				return json(
-					{ error: 'Not linked — only this venue’s owner (or an admin key) can edit it.' },
-					{ status: 403 },
-				);
+				return json({ error: NOT_LINKED_EDIT }, { status: 403 });
 			}
 			return json({ error: r.error?.error?.message ?? `Commons returned ${status}.` }, { status });
 		}

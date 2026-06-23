@@ -1,7 +1,12 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import type { Organization, components } from 'neighborhood-commons';
-import { mapOrganization, pickOrgPatch, type LiveOrg } from '$lib/instance/organizations.js';
+import {
+	mapOrganization,
+	pickOrgPatch,
+	NOT_LINKED_EDIT,
+	type LiveOrg,
+} from '$lib/instance/organizations.js';
 import { geocode } from '$lib/kernel/geocode.js';
 
 type OrgInput = components['schemas']['OrganizationInput'];
@@ -172,9 +177,7 @@ export const actions: Actions = {
 		if (result.error) {
 			const status = result.response.status;
 			if (status === 403) {
-				return fail(403, {
-					error: 'Not linked to this organization — only its owner (or an admin key) can edit it.',
-				});
+				return fail(403, { error: NOT_LINKED_EDIT });
 			}
 			return fail(status, { error: result.error?.error?.message ?? `Commons returned ${status}.` });
 		}
