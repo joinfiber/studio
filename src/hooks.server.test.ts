@@ -34,7 +34,7 @@ vi.mock('$lib/kernel/auth.js', () => ({
 }));
 
 // Import AFTER the mocks are registered.
-import { handle } from './hooks.server.js';
+import { handle, proxyOriginLikelyMisconfigured } from './hooks.server.js';
 import { issueToken } from '$lib/kernel/session.js';
 
 // ---------------------------------------------------------------------------
@@ -42,15 +42,21 @@ import { issueToken } from '$lib/kernel/session.js';
 // ---------------------------------------------------------------------------
 
 /** Build the minimal RequestEvent that `handle` inspects. The client address
- *  defaults to loopback (the genuine local-dev case). */
+ *  defaults to loopback (the genuine local-dev case). `forwardedProto` sets the
+ *  x-forwarded-proto header the proxy-origin warning checks. */
 function makeEvent(
 	pathname: string,
 	hostname: string,
 	cookieValue?: string,
 	clientAddress = '127.0.0.1',
+	forwardedProto?: string,
 ): Parameters<typeof handle>[0]['event'] {
+	const url = new URL(`http://${hostname}${pathname}`);
+	const headers = new Headers();
+	if (forwardedProto) headers.set('x-forwarded-proto', forwardedProto);
 	return {
-		url: new URL(`http://${hostname}${pathname}`),
+		url,
+		request: new Request(url, { headers }),
 		cookies: {
 			get: (_name: string) => cookieValue,
 		},
@@ -251,5 +257,39 @@ describe('security headers', () => {
 		expect(response.status).toBe(503);
 		expect(response.headers.get('X-Frame-Options')).toBe('DENY');
 		expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Proxy-origin warning
+// ---------------------------------------------------------------------------
+
+describe('proxyOriginLikelyMisconfigured', () => {
+	it('flags https-forwarded + http computed origin (the 403 setup)', () => {
+		expect(proxyOriginLikelyMisconfigured('https', 'http:')).toBe(true);
+	});
+
+	it('passes when the computed origin is already https', () => {
+		expect(proxyOriginLikelyMisconfigured('https', 'https:')).toBe(false);
+	});
+
+	it('passes when there is no proxy header (direct / local dev)', () => {
+		expect(proxyOriginLikelyMisconfigured(null, 'http:')).toBe(false);
+		expect(proxyOriginLikelyMisconfigured('http', 'http:')).toBe(false);
+	});
+});
+
+describe('proxy-origin warning (in handle)', () => {
+	it('warns once when a proxy forwards https but the origin is http', async () => {
+		env.STUDIO_ALLOW_OPEN = 'true'; // let resolve run on a non-loopback host
+		const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const ev1 = makeEvent('/dashboard', 'example.com', undefined, '203.0.113.7', 'https');
+		const ev2 = makeEvent('/other', 'example.com', undefined, '203.0.113.7', 'https');
+		await handle({ event: ev1, resolve: makeResolve() });
+		await handle({ event: ev2, resolve: makeResolve() });
+		const originWarnings = spy.mock.calls.filter((c) => String(c[0]).includes('[origin]'));
+		expect(originWarnings).toHaveLength(1); // latched after the first
+		expect(String(originWarnings[0][0])).toMatch(/PROTOCOL_HEADER/);
+		spy.mockRestore();
 	});
 });
